@@ -1,0 +1,1890 @@
+
+Line wrap
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Expedition Decision Study</title>
+
+<style>
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+background: #eef2f7; color: #1f2937; min-height: 100vh; padding: 32px 16px; line-height: 1.6;
+
+}
+
+.card {
+
+max-width: 700px; margin: 0 auto; background: #fff; border-radius: 24px;
+
+padding: 52px; box-shadow: 0 8px 40px rgba(15,23,42,0.09);
+
+}
+
+@media (max-width: 600px) { .card { padding: 32px 20px; } }
+
+
+
+h1 { font-size: 32px; font-weight: 800; color: #111827; letter-spacing: -0.5px; margin-bottom: 6px; }
+
+h2 { font-size: 24px; font-weight: 700; color: #111827; letter-spacing: -0.3px; margin-bottom: 18px; }
+
+h3 { font-size: 12px; font-weight: 700; color: #6b7280; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.7px; }
+
+p { font-size: 15.5px; color: #4b5563; margin-bottom: 14px; }
+
+strong { color: #111827; }
+
+
+
+.progress-wrap { margin-bottom: 36px; }
+
+.progress-meta { display: flex; justify-content: space-between; font-size: 13px; color: #9ca3af; font-weight: 500; margin-bottom: 8px; }
+
+.progress-track { background: #e5e7eb; border-radius: 99px; height: 6px; overflow: hidden; }
+
+.progress-fill { background: linear-gradient(90deg,#3b82f6,#6366f1); height: 100%; border-radius: 99px; transition: width .4s ease; }
+
+
+
+.btn {
+
+display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+
+padding: 13px 26px; border-radius: 12px; border: none;
+
+font-size: 15px; font-weight: 600; cursor: pointer; transition: all .15s ease;
+
+}
+
+.btn-primary { background: #2563eb; color: #fff; }
+
+.btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(37,99,235,.28); }
+
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary { background: #f3f4f6; color: #374151; border: 1.5px solid #e5e7eb; }
+
+.btn-secondary:hover { background: #e9ecf0; }
+
+.btn-row { display: flex; gap: 12px; margin-top: 32px; align-items: center; flex-wrap: wrap; }
+
+
+
+.choice-btn {
+
+display: block; width: 100%; padding: 20px 24px; border: 2.5px solid #e5e7eb;
+
+border-radius: 16px; background: #fff; cursor: pointer; text-align: left;
+
+transition: all .15s ease; margin-bottom: 14px;
+
+}
+
+.choice-btn:hover { border-color: #3b82f6; background: #f0f6ff; }
+
+.choice-btn.selected { border-color: #2563eb; background: #eff6ff; }
+
+.choice-btn .c-title { font-weight: 700; font-size: 16px; color: #111827; margin-bottom: 5px; }
+
+.choice-btn .c-desc { font-size: 14px; color: #6b7280; line-height: 1.55; }
+
+.choice-btn .c-cost {
+
+display: inline-flex; align-items: center; gap: 5px; margin-top: 8px;
+
+font-size: 12.5px; font-weight: 600; color: #d97706;
+
+background: #fef3c7; padding: 3px 10px; border-radius: 99px;
+
+}
+
+
+
+.infobox { border-radius: 14px; padding: 18px 22px; margin: 20px 0; font-size: 15px; line-height: 1.65; border-left: 4px solid; }
+
+.ib-blue { background: #eff6ff; border-color: #3b82f6; }
+
+.ib-amber { background: #fffbeb; border-color: #f59e0b; }
+
+.ib-green { background: #f0fdf4; border-color: #22c55e; }
+
+.ib-red { background: #fef2f2; border-color: #ef4444; }
+
+.ib-gray { background: #f9fafb; border-color: #9ca3af; }
+
+.ib-purple { background: #f5f3ff; border-color: #7c3aed; }
+
+
+
+.coins-row {
+
+display: flex; align-items: center; gap: 14px; padding: 18px 22px;
+
+background: #fefce8; border-radius: 14px; border: 1.5px solid #fde68a; margin-bottom: 22px;
+
+}
+
+.coins-icon { font-size: 30px; }
+
+.coins-label { font-weight: 700; font-size: 18px; color: #92400e; }
+
+.coins-sub { font-size: 13px; color: #a16207; margin-top: 2px; }
+
+
+
+.risk-box { background: #f9fafb; border-radius: 18px; padding: 26px 28px; margin: 24px 0; border: 1.5px solid #e5e7eb; }
+
+.risk-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+
+.risk-label-text { font-size: 13px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.risk-sublabel { font-size: 13px; color: #9ca3af; margin-top: 3px; }
+
+.risk-pct { font-size: 44px; font-weight: 900; line-height: 1; }
+
+.risk-bar { background: #e5e7eb; height: 18px; border-radius: 9px; overflow: hidden; margin-bottom: 12px; }
+
+.risk-fill { height: 100%; border-radius: 9px; transition: width .7s cubic-bezier(.4,0,.2,1); }
+
+.risk-legend { display: flex; justify-content: space-between; font-size: 13px; color: #6b7280; flex-wrap: wrap; gap: 4px; }
+
+.risk-legend span { display: flex; align-items: center; gap: 6px; }
+
+.risk-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+
+
+/* Countdown */
+
+.countdown-wrap { text-align: center; padding: 40px 20px; }
+
+.countdown-circle {
+
+width: 140px; height: 140px; border-radius: 50%; border: 8px solid #e5e7eb;
+
+margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;
+
+position: relative; font-size: 42px; font-weight: 900; color: #2563eb;
+
+}
+
+.countdown-ring { position: absolute; top: -8px; left: -8px; width: 140px; height: 140px; border-radius: 50%; transform: rotate(-90deg); }
+
+.countdown-ring-fill { fill: none; stroke: #2563eb; stroke-width: 8; stroke-dasharray: 339; stroke-dashoffset: 0; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+
+.countdown-label { font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+
+.countdown-sub { font-size: 14px; color: #9ca3af; }
+
+
+
+/* Likert */
+
+.likert-group { margin-bottom: 30px; }
+
+.likert-q { font-weight: 600; font-size: 15px; color: #1f2937; margin-bottom: 14px; line-height: 1.55; }
+
+.likert-scale { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; }
+
+.likert-scale input[type="radio"] { display: none; }
+
+.likert-scale label {
+
+display: flex; align-items: center; justify-content: center; padding: 11px 4px;
+
+border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer;
+
+font-size: 14px; font-weight: 600; color: #9ca3af; transition: all .12s ease; user-select: none;
+
+}
+
+.likert-scale input[type="radio"]:checked + label { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+.likert-scale label:hover { border-color: #93c5fd; color: #2563eb; }
+
+.likert-ends { display: flex; justify-content: space-between; font-size: 12px; color: #9ca3af; margin-top: 6px; padding: 0 2px; }
+
+
+
+/* Comprehension */
+
+.comp-item { margin-bottom: 28px; }
+
+.comp-q { font-weight: 600; font-size: 15px; color: #1f2937; margin-bottom: 12px; }
+
+.radio-option {
+
+display: flex; align-items: flex-start; gap: 12px; padding: 13px 16px;
+
+border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer;
+
+margin-bottom: 9px; transition: all .12s ease; font-size: 15px;
+
+}
+
+.radio-option:hover { border-color: #93c5fd; }
+
+.radio-option.is-correct { border-color: #22c55e; background: #f0fdf4; }
+
+.radio-option.is-wrong { border-color: #ef4444; background: #fef2f2; }
+
+.radio-option input { margin-top: 3px; flex-shrink: 0; accent-color: #2563eb; }
+
+
+
+/* Demographics form */
+
+.form-group { margin-bottom: 22px; }
+
+.form-label { display: block; font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 6px; }
+
+.form-label .optional { font-weight: 400; color: #9ca3af; font-size: 13px; margin-left: 4px; }
+
+.form-input {
+
+width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 10px;
+
+font-size: 15px; color: #1f2937; outline: none; transition: border-color .15s;
+
+background: #fff;
+
+}
+
+.form-input:focus { border-color: #3b82f6; }
+
+.form-input[readonly] { background: #f9fafb; color: #6b7280; }
+
+.form-hint { font-size: 12.5px; color: #9ca3af; margin-top: 5px; }
+
+
+
+/* Condition badge */
+
+.cond-badge {
+
+display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+
+border-radius: 99px; font-size: 13px; font-weight: 700; letter-spacing: 0.3px;
+
+}
+
+.cond-none { background: #fef3c7; color: #92400e; }
+
+.cond-low { background: #fee2e2; color: #991b1b; }
+
+.cond-high { background: #d1fae5; color: #065f46; }
+
+
+
+/* Summary table */
+
+.summary-table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 20px 0; }
+
+.summary-table th { background: #f3f4f6; padding: 10px 14px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; }
+
+.summary-table td { padding: 11px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+
+.summary-table tr:last-child td { border-bottom: none; }
+
+.badge { display: inline-block; padding: 3px 11px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+
+.badge-yes { background: #dcfce7; color: #166534; }
+
+.badge-no { background: #fee2e2; color: #991b1b; }
+
+
+
+/* Save status */
+
+.save-status { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 10px 0; }
+
+.save-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+.save-dot.saving { background: #f59e0b; animation: pulse 1s infinite; }
+
+.save-dot.saved { background: #22c55e; }
+
+.save-dot.failed { background: #ef4444; }
+
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+
+
+
+.divider { border: none; border-top: 1px solid #e5e7eb; margin: 28px 0; }
+
+.text-sm { font-size: 13px; color: #9ca3af; }
+
+.mt-16 { margin-top: 16px; }
+
+.mt-24 { margin-top: 24px; }
+
+.error-msg { color: #dc2626; font-size: 13.5px; margin-top: 10px; font-weight: 500; }
+
+.hidden { display: none !important; }
+
+.step-pill {
+
+display: inline-block; background: #eff6ff; color: #2563eb;
+
+font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 99px;
+
+letter-spacing: 0.4px; margin-bottom: 14px; text-transform: uppercase;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="root"></div>
+
+
+
+<script>
+
+// ═══════════════════════════════════════════════════════════════
+
+// ★ RESEARCHER SETTINGS — edit before deploying ★
+
+// ═══════════════════════════════════════════════════════════════
+
+const RESEARCHER = {
+
+// Google Sheets auto-backup.
+
+// 1. Create a Google Apps Script web app (see DEPLOYMENT_GUIDE.md for code).
+
+// 2. Deploy it and paste the web app URL here.
+
+// Leave blank ('') to disable — participants must download CSV manually.
+
+sheetsWebAppURL: 'https://script.google.com/macros/s/AKfycbxQgPXeHqkUAs6hD74neYrIQKGfo3gpfEoGrEBqUqnmJtCn5tYxUYH8QfeSW6kfLbeg2Q/exec”’,
+
+
+
+// Prolific completion URL.
+
+// Find this in your Prolific study under "What should participants do after completing?"
+
+// e.g. 'https://app.prolific.com/submissions/complete?cc=XXXXXXXX'
+
+// Leave blank if not using Prolific.
+
+prolificCompletionURL: '',
+
+
+
+// Wait time (seconds) when participant chooses "Contact now."
+
+// Mimics the paper's 1-minute delay. Set to 0 for researcher testing.
+
+waitSecs: 45
+
+};
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// CONDITION ASSIGNMENT
+
+//
+
+// BETWEEN-SUBJECTS via URL parameter — set this in your study link:
+
+// ?condition=none → No Instrumentality (key for H1: probability reversal)
+
+// ?condition=low → Low Instrumentality (intermediate)
+
+// ?condition=high → High Instrumentality (key for H2: instrumentality reversal)
+
+//
+
+// If not in URL, randomly assigned 50/50 between 'none' and 'high'.
+
+//
+
+// RECOMMENDED FOR PROLIFIC: Create two separate study links:
+
+// Study A: https://your-url/reassurance_experiment.html?condition=none
+
+// Study B: https://your-url/reassurance_experiment.html?condition=high
+
+// Target equal N per link. Prolific handles the participant routing.
+
+// You can see which condition each participant was in via the CSV.
+
+// ═══════════════════════════════════════════════════════════════
+
+
+
+const CFG = {
+
+studyName: 'Reassurance-Seeking Experiment — Study 3',
+
+coins: 100,
+
+probabilities: [0.10, 0.25, 0.50, 0.75, 0.90],
+
+conditions: {
+
+none: {
+
+label: 'No Instrumentality',
+
+cls: 'cond-none',
+
+recoverable: 0,
+
+ifBadNews: 'there is <strong>nothing you can do</strong> — the result is final. You lose all 100 coins.',
+
+nowDesc: 'Learn the result immediately. If bad news: lose 100 coins (no further action possible). If good news: keep 100.',
+
+waitDesc: 'Find out later for free. The outcome is identical whether you contact them now or not.',
+
+debrief: 'In your condition, information had <strong>no practical value</strong>. Our theory predicts that reassurance-seeking dominates: information-seeking should be <em>higher at low mishap probabilities</em> (when good news is likely and reassuring) than at high probabilities (when fear of bad news deters seeking).'
+
+},
+
+low: {
+
+label: 'Low Instrumentality',
+
+cls: 'cond-low',
+
+recoverable: 20,
+
+ifBadNews: 'you can make a small corrective adjustment — saving <strong>20 coins</strong> (you lose 80 instead of 100).',
+
+nowDesc: 'Learn the result immediately. If bad news: small correction saves 20 coins (you lose 80). If good news: keep 100.',
+
+waitDesc: 'Find out later for free. Note: too late for the adjustment — you\'d lose all 100 on bad news.',
+
+debrief: 'In your condition, information had <strong>limited practical value</strong> (saves only 20 of 100 coins). Our theory predicts that reassurance-seeking still dominates over instrumental value at low mishap probabilities.'
+
+},
+
+high: {
+
+label: 'High Instrumentality',
+
+cls: 'cond-high',
+
+recoverable: 60,
+
+ifBadNews: 'you <strong>can redirect</strong> the expedition to a backup route — saving <strong>60 coins</strong> (you lose only 40 instead of 100).',
+
+nowDesc: 'Learn the result immediately. If bad news: redirect saves 60 coins (you lose only 40). If good news: keep 100.',
+
+waitDesc: 'Find out later for free. Note: too late to redirect — you\'d lose all 100 on bad news.',
+
+debrief: 'In your condition, information had <strong>high practical value</strong> (saves 60 of 100 coins). Our theory predicts that instrumental value increases information-seeking, especially at higher mishap probabilities where bad news is more likely.'
+
+}
+
+}
+
+};
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// STATE
+
+// ═══════════════════════════════════════════════════════════════
+
+const S = {
+
+screen: 'welcome',
+
+condition: null, // 'none' | 'low' | 'high'
+
+conditionSource: null, // 'url' | 'random'
+
+pid: null,
+
+// Prolific / platform params (auto-detected from URL)
+
+prolificPID: null,
+
+studyID: null,
+
+sessionID: null,
+
+platform: null, // 'prolific' | 'mturk' | 'manual'
+
+// Participant demographics
+
+participantID: '',
+
+participantName: '',
+
+participantEmail: '',
+
+// Experiment
+
+trialOrder: [],
+
+currentTrial: 0,
+
+currentChoice: null,
+
+trialStartTime: null,
+
+responses: [],
+
+compErrors: 0,
+
+compAnswers: { q1: null, q2: null },
+
+// Countdown
+
+countdownInterval: null,
+
+countdownRemaining: 0,
+
+// Data save
+
+saveStatus: 'pending' // 'pending' | 'saving' | 'saved' | 'failed'
+
+};
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// HELPERS
+
+// ═══════════════════════════════════════════════════════════════
+
+function uid() { return 'P' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,6).toUpperCase(); }
+
+function shuffle(arr) {
+
+const a = [...arr];
+
+for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+
+return a;
+
+}
+
+function pct(p) { return (p*100).toFixed(0)+'%'; }
+
+function riskColor(p){ return p<=.20?'#22c55e':p<=.40?'#84cc16':p<=.60?'#f59e0b':p<=.80?'#f97316':'#ef4444'; }
+
+function riskWord(p) { return p<=.15?'Very Low Risk':p<=.35?'Low Risk':p<=.65?'Moderate Risk':p<=.80?'High Risk':'Very High Risk'; }
+
+function cond() { return CFG.conditions[S.condition]; }
+
+
+
+function render() {
+
+if (S.countdownInterval) { clearInterval(S.countdownInterval); S.countdownInterval=null; }
+
+const fn = {
+
+welcome: renderWelcome,
+
+demographics: renderDemographics,
+
+instructions: renderInstructions,
+
+comprehension: renderComprehension,
+
+practice: renderPractice,
+
+trial: renderTrial,
+
+waiting: renderWaiting,
+
+process: renderProcess,
+
+end: renderEnd
+
+}[S.screen] || renderWelcome;
+
+document.getElementById('root').innerHTML = fn();
+
+if (S.screen === 'waiting') startCountdown();
+
+if (S.screen === 'end') attemptSheetsSave();
+
+}
+
+
+
+function go(screen) { S.screen=screen; window.scrollTo(0,0); render(); }
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// INIT
+
+// ═══════════════════════════════════════════════════════════════
+
+function init() {
+
+const p = new URLSearchParams(window.location.search);
+
+
+
+// Condition
+
+const c = p.get('condition');
+
+if (c==='none'||c==='low'||c==='high') { S.condition=c; S.conditionSource='url'; }
+
+else { S.condition=Math.random()<.5?'none':'high'; S.conditionSource='random'; }
+
+
+
+// Platform detection
+
+const prolificPID = p.get('PROLIFIC_PID') || p.get('prolific_pid');
+
+const mturkWorker = p.get('workerId') || p.get('worker_id');
+
+if (prolificPID) {
+
+S.prolificPID = prolificPID;
+
+S.studyID = p.get('STUDY_ID') || p.get('study_id') || '';
+
+S.sessionID = p.get('SESSION_ID') || p.get('session_id') || '';
+
+S.platform = 'prolific';
+
+S.participantID = prolificPID;
+
+} else if (mturkWorker) {
+
+S.platform = 'mturk';
+
+S.participantID = mturkWorker;
+
+} else {
+
+S.platform = 'manual';
+
+}
+
+
+
+// Participant PID fallback
+
+S.pid = p.get('pid') || S.participantID || uid();
+
+S.trialOrder = shuffle([...CFG.probabilities]);
+
+render();
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// SCREEN: WELCOME
+
+// ═══════════════════════════════════════════════════════════════
+
+function renderWelcome() {
+
+const cd = cond();
+
+const sourceNote = S.conditionSource==='url'
+
+? '✓ Set by researcher via URL parameter'
+
+: '⚡ Randomly assigned (50/50 between None and High)';
+
+return `
+
+<div class="card">
+
+<span class="step-pill">Welcome</span>
+
+<h1>🗺️ The Expedition Game</h1>
+
+<p style="font-size:17px;color:#374151;margin-bottom:28px;">A study on how people decide whether to seek information under uncertainty.</p>
+
+
+
+<div class="infobox ib-blue">
+
+<strong>What you'll do:</strong> In each of 5 rounds, you have sponsored an expedition. A mishap may have occurred.
+
+You decide whether to <em>contact the expedition now</em> (costs ~${RESEARCHER.waitSecs}s of waiting) or <em>wait until they return</em> (free, later).
+
+The mishap probability changes each round.
+
+</div>
+
+
+
+<p>One round will be randomly selected and played out for real, so please treat each decision seriously. The study takes about 10–12 minutes.</p>
+
+
+
+<hr class="divider">
+
+
+
+<h3>Session Info (for researcher records)</h3>
+
+<div style="display:grid;gap:8px;font-size:13.5px;background:#f9fafb;padding:16px;border-radius:12px;border:1px solid #e5e7eb;">
+
+<div><span style="color:#9ca3af;width:140px;display:inline-block;">Participant ID</span> <strong>${S.pid}</strong></div>
+
+<div><span style="color:#9ca3af;width:140px;display:inline-block;">Platform</span> <strong>${S.platform}</strong>${S.prolificPID ? ' (Prolific ID: '+S.prolificPID+')' : ''}</div>
+
+<div><span style="color:#9ca3af;width:140px;display:inline-block;">Condition</span> <span class="cond-badge ${cd.cls}">${cd.label}</span></div>
+
+<div><span style="color:#9ca3af;width:140px;display:inline-block;">Assignment</span> <strong>${sourceNote}</strong></div>
+
+<div><span style="color:#9ca3af;width:140px;display:inline-block;">Trial order</span> <strong>${S.trialOrder.map(p=>(p*100).toFixed(0)+'%').join(' → ')}</strong></div>
+
+</div>
+
+
+
+<div class="btn-row">
+
+<button class="btn btn-primary" onclick="go('demographics')">Continue →</button>
+
+</div>
+
+</div>`;
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// SCREEN: DEMOGRAPHICS
+
+// ═══════════════════════════════════════════════════════════════
+
+function renderDemographics() {
+
+const isProlific = S.platform === 'prolific';
+
+const isMTurk = S.platform === 'mturk';
+
+
+
+return `
+
+<div class="card">
+
+<span class="step-pill">Your Information</span>
+
+<h2>Participant Details</h2>
+
+
+
+${isProlific ? `
+
+<div class="infobox ib-green">
+
+✅ <strong>Prolific detected.</strong> Your Prolific ID has been recorded automatically. No further action needed on this screen.
+
+</div>
+
+<div class="form-group">
+
+<label class="form-label">Prolific ID</label>
+
+<input class="form-input" readonly value="${S.prolificPID}">
+
+</div>` : isMTurk ? `
+
+<div class="infobox ib-blue">
+
+Your MTurk Worker ID has been detected from the URL.
+
+</div>
+
+<div class="form-group">
+
+<label class="form-label">MTurk Worker ID</label>
+
+<input class="form-input" readonly value="${S.participantID}">
+
+</div>` : `
+
+<p>Please enter your details below. This information is used only for payment and follow-up, and will be stored securely.</p>
+
+<div class="form-group">
+
+<label class="form-label">Participant / Study ID <span style="color:#ef4444">*</span></label>
+
+<input class="form-input" id="f-pid" placeholder="e.g. your Prolific ID, student ID, or assigned code"
+
+value="${S.participantID}" oninput="S.participantID=this.value">
+
+<div class="form-hint">Ask your researcher for your assigned ID if you're unsure.</div>
+
+</div>
+
+<div class="form-group">
+
+<label class="form-label">Full Name <span class="optional">(optional)</span></label>
+
+<input class="form-input" id="f-name" placeholder="Your name"
+
+value="${S.participantName}" oninput="S.participantName=this.value">
+
+</div>
+
+<div class="form-group">
+
+<label class="form-label">Email Address <span class="optional">(optional — for payment / follow-up)</span></label>
+
+<input class="form-input" type="email" id="f-email" placeholder="you@example.com"
+
+value="${S.participantEmail}" oninput="S.participantEmail=this.value">
+
+</div>`}
+
+
+
+<div id="demo-err" class="error-msg hidden">Please enter a Participant ID before continuing.</div>
+
+
+
+<div class="btn-row">
+
+<button class="btn btn-secondary" onclick="go('welcome')">← Back</button>
+
+<button class="btn btn-primary" onclick="submitDemographics()">Continue →</button>
+
+</div>
+
+</div>`;
+
+}
+
+
+
+function submitDemographics() {
+
+const isProlific = S.platform === 'prolific';
+
+const isMTurk = S.platform === 'mturk';
+
+if (!isProlific && !isMTurk && !S.participantID.trim()) {
+
+document.getElementById('demo-err').classList.remove('hidden');
+
+return;
+
+}
+
+if (!S.participantID) S.participantID = S.pid;
+
+S.pid = S.participantID || S.pid;
+
+go('instructions');
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// SCREEN: INSTRUCTIONS
+
+// ═══════════════════════════════════════════════════════════════
+
+function renderInstructions() {
+
+const cd = cond();
+
+const isNone = S.condition==='none';
+
+const isHigh = S.condition==='high';
+
+const boxCls = isNone?'ib-amber':(isHigh?'ib-green':'ib-red');
+
+return `
+
+<div class="card">
+
+<span class="step-pill">Instructions</span>
+
+<h2>How the Study Works</h2>
+
+
+
+<h3>Your Expedition</h3>
+
+<p>You have sponsored an expedition to search for rare artifacts. You invested <strong>100 gold coins</strong> — already committed and non-refundable. The expedition is underway and the outcome has already been determined, but you don't know it yet.</p>
+
+<div class="coins-row">
+
+<span class="coins-icon">💰</span>
+
+<div><div class="coins-label">100 Gold Coins Invested</div><div class="coins-sub">Non-refundable — outcome determined, unknown to you</div></div>
+
+</div>
+
+
+
+<h3>The Risk</h3>
+
+<p>A mishap may have occurred. The <strong>probability of a mishap</strong> varies across rounds. Mishap → you lose 100 coins. No mishap → you keep 100 coins.</p>
+
+
+
+<h3>Your Decision</h3>
+
+<p>You may <strong>send a messenger to get an update now</strong> — but only if you decide immediately. The messenger takes about <strong>${RESEARCHER.waitSecs} seconds</strong> to travel and return. If you wait, you learn the outcome for free when the expedition returns.</p>
+
+
+
+<div class="infobox ${boxCls}">
+
+<strong>⚠️ If you contact them and hear bad news (mishap occurred):</strong><br><br>
+
+${cd.ifBadNews}
+
+${!isNone?'<br><br><em>If you wait instead, it will be too late for this action.</em>':''}
+
+</div>
+
+
+
+<p>You make this decision across <strong>5 rounds</strong> with different mishap probabilities. After each choice, you answer 3 quick questions. At the end, one round is randomly selected for real play.</p>
+
+
+
+<div class="btn-row">
+
+<button class="btn btn-secondary" onclick="go('demographics')">← Back</button>
+
+<button class="btn btn-primary" onclick="go('comprehension')">Check Understanding →</button>
+
+</div>
+
+</div>`;
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// SCREEN: COMPREHENSION CHECK
+
+// ═══════════════════════════════════════════════════════════════
+
+function renderComprehension() {
+
+const q1c = S.condition==='none'?'c':'b';
+
+const q2c = 'b';
+
+return `
+
+<div class="card">
+
+<span class="step-pill">Comprehension Check</span>
+
+<h2>✅ Check Your Understanding</h2>
+
+<p>Answer both questions. Wrong answers are shown in red; correct answers in green. You may re-read the instructions and try again.</p>
+
+
+
+<div class="comp-item">
+
+<p class="comp-q">1. If you contact the expedition and hear bad news (mishap occurred), what happens?</p>
+
+<label class="radio-option" id="q1-a"><input type="radio" name="q1" value="a" onchange="S.compAnswers.q1='a'">
+
+<span>You receive a full refund of all 100 coins.</span></label>
+
+<label class="radio-option" id="q1-b"><input type="radio" name="q1" value="b" onchange="S.compAnswers.q1='b'">
+
+<span>${S.condition==='none'
+
+?'You can make a corrective action to reduce your loss.'
+
+:S.condition==='low'
+
+?'You can make a small corrective adjustment and save 20 coins (you lose 80).'
+
+:'You can redirect the expedition to save 60 coins (you lose only 40).'}</span></label>
+
+<label class="radio-option" id="q1-c"><input type="radio" name="q1" value="c" onchange="S.compAnswers.q1='c'">
+
+<span>Nothing — you lose all 100 coins, and no further action is possible.</span></label>
+
+</div>
+
+
+
+<div class="comp-item">
+
+<p class="comp-q">2. If you choose to contact the expedition, what happens before you see the result?</p>
+
+<label class="radio-option" id="q2-a"><input type="radio" name="q2" value="a" onchange="S.compAnswers.q2='a'">
+
+<span>You learn the result instantly and for free.</span></label>
+
+<label class="radio-option" id="q2-b"><input type="radio" name="q2" value="b" onchange="S.compAnswers.q2='b'">
+
+<span>You wait about ${RESEARCHER.waitSecs} seconds while the messenger travels and returns.</span></label>
+
+<label class="radio-option" id="q2-c"><input type="radio" name="q2" value="c" onchange="S.compAnswers.q2='c'">
+
+<span>You pay a coin fee, then learn instantly.</span></label>
+
+</div>
+
+
+
+<div id="comp-error" class="error-msg hidden">Please answer both questions.</div>
+
+<div class="btn-row">
+
+<button class="btn btn-secondary" onclick="go('instructions')">← Back</button>
+
+<button class="btn btn-primary" onclick="checkComp('${q1c}','${q2c}')">Submit →</button>
+
+</div>
+
+</div>`;
+
+}
+
+
+
+function checkComp(q1c, q2c) {
+
+const a1=S.compAnswers.q1, a2=S.compAnswers.q2;
+
+if (!a1||!a2) { showErr('comp-error','Please answer both questions.'); return; }
+
+['a','b','c'].forEach(v=>{
+
+const e1=document.getElementById('q1-'+v), e2=document.getElementById('q2-'+v);
+
+[e1,e2].forEach(e=>e.classList.remove('is-correct','is-wrong'));
+
+if(v===q1c) e1.classList.add('is-correct'); else if(v===a1&&a1!==q1c) e1.classList.add('is-wrong');
+
+if(v===q2c) e2.classList.add('is-correct'); else if(v===a2&&a2!==q2c) e2.classList.add('is-wrong');
+
+});
+
+if(a1!==q1c||a2!==q2c){
+
+S.compErrors++;
+
+showErr('comp-error','Some answers incorrect (red). Correct answers highlighted green. Please re-read and try again.');
+
+return;
+
+}
+
+S.compAnswers={q1:null,q2:null};
+
+go('practice');
+
+}
+
+
+
+function showErr(id, msg) {
+
+const el=document.getElementById(id);
+
+if(el){el.textContent=msg;el.classList.remove('hidden');}
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// SCREEN: PRACTICE
+
+// ═══════════════════════════════════════════════════════════════
+
+function renderPractice() {
+
+const p=0.50, cd=cond(), color=riskColor(p);
+
+const isNone=S.condition==='none', isHigh=S.condition==='high';
+
+return `
+
+<div class="card">
+
+<div class="infobox ib-blue" style="margin-bottom:28px;">
+
+<strong>🎯 Practice Round</strong> — Does not count toward your reward. Get familiar with the interface.
+
+</div>
+
+<span class="step-pill">Practice</span>
+
+<h2>Expedition Decision — Practice</h2>
+
+<div class="coins-row">
+
+<span class="coins-icon">💰</span>
+
+<div><div class="coins-label">100 Coins at Stake</div><div class="coins-sub">Outcome determined — unknown to you</div></div>
+
+</div>
+
+<div class="risk-box">
+
+<div class="risk-top">
+
+<div><div class="risk-label-text">☢ Mishap Probability</div><div class="risk-sublabel">${riskWord(p)}</div></div>
+
+<div class="risk-pct" style="color:${color}">${pct(p)}</div>
+
+</div>
+
+<div class="risk-bar"><div class="risk-fill" style="width:${p*100}%;background:${color}"></div></div>
+
+<div class="risk-legend">
+
+<span><span class="risk-dot" style="background:${color}"></span>50% chance mishap occurred</span>
+
+<span>Mishap → lose 100 &nbsp;|&nbsp; No mishap → keep 100</span>
+
+</div>
+
+</div>
+
+<div class="infobox ${isNone?'ib-amber':isHigh?'ib-green':'ib-red'}">
+
+<strong>If you contact them and hear bad news:</strong><br>${cd.ifBadNews}
+
+</div>
+
+<h3>What would you like to do?</h3>
+
+<button class="choice-btn" id="p-now" onclick="practiceChoose('now')">
+
+<div class="c-title">📡 Contact the expedition — learn the result now</div>
+
+<div class="c-desc">${cd.nowDesc}</div>
+
+<span class="c-cost">⏱ Wait ~${RESEARCHER.waitSecs} seconds for the messenger</span>
+
+</button>
+
+<button class="choice-btn" id="p-wait" onclick="practiceChoose('wait')">
+
+<div class="c-title">⏳ Wait until they return — find out later, for free</div>
+
+<div class="c-desc">${cd.waitDesc}</div>
+
+</button>
+
+<div id="practice-next" class="hidden mt-24">
+
+<div class="infobox ib-gray">Good. In real rounds, you also answer 3 brief questions after each choice. If you choose "Contact now," the ${RESEARCHER.waitSecs}-second wait begins immediately.</div>
+
+<div class="btn-row"><button class="btn btn-primary" onclick="startTrials()">Start Round 1 of 5 →</button></div>
+
+</div>
+
+</div>`;
+
+}
+
+
+
+function practiceChoose(v) {
+
+document.getElementById('p-now').classList.toggle('selected',v==='now');
+
+document.getElementById('p-wait').classList.toggle('selected',v==='wait');
+
+document.getElementById('practice-next').classList.remove('hidden');
+
+}
+
+function startTrials() { S.currentTrial=0; S.currentChoice=null; S.trialStartTime=Date.now(); go('trial'); }
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// SCREEN: TRIAL
+
+// ═══════════════════════════════════════════════════════════════
+
+function renderTrial() {
+
+const p=S.trialOrder[S.currentTrial], total=S.trialOrder.length, round=S.currentTrial+1;
+
+const color=riskColor(p), cd=cond();
+
+const isNone=S.condition==='none', isHigh=S.condition==='high';
+
+return `
+
+<div class="card">
+
+<div class="progress-wrap">
+
+<div class="progress-meta"><span>Round ${round} of ${total}</span><span>${pct(p)} mishap probability</span></div>
+
+<div class="progress-track"><div class="progress-fill" style="width:${((round-1)/total)*100}%"></div></div>
+
+</div>
+
+<h2>Expedition Decision</h2>
+
+<div class="coins-row">
+
+<span class="coins-icon">💰</span>
+
+<div><div class="coins-label">100 Coins at Stake</div><div class="coins-sub">Already invested — outcome determined, unknown to you</div></div>
+
+</div>
+
+<div class="risk-box">
+
+<div class="risk-top">
+
+<div><div class="risk-label-text">☢ Mishap Probability</div><div class="risk-sublabel">${riskWord(p)}</div></div>
+
+<div class="risk-pct" style="color:${color}">${pct(p)}</div>
+
+</div>
+
+<div class="risk-bar"><div class="risk-fill" style="width:${p*100}%;background:${color}"></div></div>
+
+<div class="risk-legend">
+
+<span><span class="risk-dot" style="background:${color}"></span>${pct(p)} chance mishap occurred</span>
+
+<span>Mishap → lose 100 &nbsp;|&nbsp; No mishap → keep 100</span>
+
+</div>
+
+</div>
+
+<div class="infobox ${isNone?'ib-amber':isHigh?'ib-green':'ib-red'}">
+
+<strong>Reminder — if you contact them and hear bad news:</strong><br>${cd.ifBadNews}
+
+</div>
+
+<h3>What would you like to do?</h3>
+
+<button class="choice-btn" id="t-now" onclick="trialChoose('now')">
+
+<div class="c-title">📡 Contact the expedition — learn the result now</div>
+
+<div class="c-desc">${cd.nowDesc}</div>
+
+<span class="c-cost">⏱ Wait ~${RESEARCHER.waitSecs} seconds for the messenger</span>
+
+</button>
+
+<button class="choice-btn" id="t-wait" onclick="trialChoose('wait')">
+
+<div class="c-title">⏳ Wait until they return — find out later, for free</div>
+
+<div class="c-desc">${cd.waitDesc}</div>
+
+</button>
+
+<div id="trial-err" class="error-msg hidden">Please make a selection before confirming.</div>
+
+<div class="btn-row"><button class="btn btn-primary" onclick="submitTrial()">Confirm Choice →</button></div>
+
+</div>`;
+
+}
+
+
+
+function trialChoose(v) {
+
+S.currentChoice=v;
+
+document.getElementById('t-now').classList.toggle('selected',v==='now');
+
+document.getElementById('t-wait').classList.toggle('selected',v==='wait');
+
+document.getElementById('trial-err').classList.add('hidden');
+
+}
+
+
+
+function submitTrial() {
+
+if (!S.currentChoice) { document.getElementById('trial-err').classList.remove('hidden'); return; }
+
+S.responses.push({
+
+pid: S.pid, prolific_pid: S.prolificPID||'', condition: S.condition,
+
+trial: S.currentTrial+1, probability: S.trialOrder[S.currentTrial],
+
+seek_now: S.currentChoice==='now'?1:0,
+
+rt_decision_ms: Date.now()-S.trialStartTime,
+
+rt_wait_ms: 0,
+
+reassurance: null, fear: null, action: null
+
+});
+
+if (S.currentChoice==='now' && RESEARCHER.waitSecs>0) {
+
+S.countdownRemaining=RESEARCHER.waitSecs; go('waiting');
+
+} else {
+
+S.currentChoice=null; go('process');
+
+}
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// SCREEN: WAITING (countdown)
+
+// ═══════════════════════════════════════════════════════════════
+
+function renderWaiting() {
+
+const p=S.trialOrder[S.currentTrial];
+
+const circ=2*Math.PI*54;
+
+return `
+
+<div class="card">
+
+<div class="infobox ib-purple" style="margin-bottom:32px;">
+
+📡 <strong>Messenger dispatched.</strong> Waiting for them to travel and return with news…
+
+</div>
+
+<div class="countdown-wrap">
+
+<div class="countdown-circle">
+
+<svg class="countdown-ring" viewBox="0 0 140 140">
+
+<circle cx="70" cy="70" r="54" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+
+<circle class="countdown-ring-fill" id="ring-fill" cx="70" cy="70" r="54"
+
+stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="0"/>
+
+</svg>
+
+<span id="countdown-num">${RESEARCHER.waitSecs}</span>
+
+</div>
+
+<div class="countdown-label" id="countdown-label">Waiting for the messenger…</div>
+
+<div class="countdown-sub">This round: <strong>${pct(p)} mishap probability</strong></div>
+
+</div>
+
+<div id="countdown-done" class="hidden text-center mt-24">
+
+<div class="infobox ib-blue" style="margin-bottom:20px;">✅ The messenger has returned with news!</div>
+
+<button class="btn btn-primary" onclick="afterWait()">See the result and continue →</button>
+
+</div>
+
+</div>`;
+
+}
+
+
+
+function startCountdown() {
+
+const circ=2*Math.PI*54;
+
+let remaining=S.countdownRemaining;
+
+const waitStart=Date.now();
+
+S.countdownInterval=setInterval(()=>{
+
+remaining--;
+
+const num=document.getElementById('countdown-num');
+
+const ring=document.getElementById('ring-fill');
+
+const lbl=document.getElementById('countdown-label');
+
+if(!num){clearInterval(S.countdownInterval);return;}
+
+num.textContent=remaining;
+
+if(ring) ring.style.strokeDashoffset=(circ*(1-remaining/RESEARCHER.waitSecs)).toFixed(1);
+
+if(remaining<=10&&lbl) lbl.textContent='Almost there…';
+
+if(remaining<=0){
+
+clearInterval(S.countdownInterval); S.countdownInterval=null;
+
+const resp=S.responses[S.responses.length-1];
+
+if(resp) resp.rt_wait_ms=Date.now()-waitStart;
+
+if(num) num.textContent='0';
+
+if(lbl) lbl.textContent='Done!';
+
+const done=document.getElementById('countdown-done');
+
+if(done) done.classList.remove('hidden');
+
+}
+
+},1000);
+
+}
+
+
+
+function afterWait() { S.currentChoice=null; go('process'); }
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// SCREEN: PROCESS MEASURES
+
+// ═══════════════════════════════════════════════════════════════
+
+function renderProcess() {
+
+const resp=S.responses[S.responses.length-1];
+
+const p=resp.probability, total=S.trialOrder.length;
+
+const choiceLabel=resp.seek_now?'contact the expedition now':'wait until they return';
+
+function lk(name,q){
+
+const opts=[1,2,3,4,5,6,7].map(v=>`<input type="radio" name="${name}" id="${name}${v}" value="${v}"><label for="${name}${v}">${v}</label>`).join('');
+
+return `<div class="likert-group"><div class="likert-q">${q}</div><div class="likert-scale">${opts}</div><div class="likert-ends"><span>Strongly Disagree</span><span>Strongly Agree</span></div></div>`;
+
+}
+
+return `
+
+<div class="card">
+
+<div class="progress-wrap">
+
+<div class="progress-meta"><span>Round ${resp.trial} of ${total} — Follow-Up</span><span>${pct(p)} mishap probability</span></div>
+
+<div class="progress-track"><div class="progress-fill" style="width:${(resp.trial/total)*100}%"></div></div>
+
+</div>
+
+<h2>A Few Questions</h2>
+
+<p>You chose to <strong>${choiceLabel}</strong> when there was a <strong>${pct(p)} chance</strong> of a mishap. Rate how much you agree with each statement, reflecting your thoughts <em>at the moment you decided</em>.</p>
+
+<hr class="divider">
+
+${lk('reassurance','1. &ldquo;I expected that contacting the expedition would <strong>reassure me</strong> that everything was fine.&rdquo;')}
+
+${lk('fear','2. &ldquo;I <strong>feared</strong> that contacting the expedition might bring bad news.&rdquo;')}
+
+${lk('action','3. &ldquo;I wanted to contact the expedition so that I could <strong>take action</strong> based on the result.&rdquo;')}
+
+<div id="proc-err" class="error-msg hidden">Please answer all three questions.</div>
+
+<div class="btn-row">
+
+<button class="btn btn-primary" onclick="submitProcess()">
+
+${S.currentTrial+1<S.trialOrder.length?'Next Round →':'Finish Study →'}
+
+</button>
+
+</div>
+
+</div>`;
+
+}
+
+
+
+function submitProcess() {
+
+const r=document.querySelector('input[name="reassurance"]:checked');
+
+const f=document.querySelector('input[name="fear"]:checked');
+
+const a=document.querySelector('input[name="action"]:checked');
+
+if(!r||!f||!a){document.getElementById('proc-err').classList.remove('hidden');return;}
+
+const resp=S.responses[S.responses.length-1];
+
+resp.reassurance=parseInt(r.value); resp.fear=parseInt(f.value); resp.action=parseInt(a.value);
+
+S.currentTrial++;
+
+if(S.currentTrial<S.trialOrder.length){S.trialStartTime=Date.now();go('trial');}
+
+else go('end');
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// SCREEN: END
+
+// ═══════════════════════════════════════════════════════════════
+
+function renderEnd() {
+
+const cd=cond();
+
+const seekCount=S.responses.filter(r=>r.seek_now).length;
+
+const total=S.responses.length;
+
+const sorted=[...S.responses].sort((a,b)=>a.probability-b.probability);
+
+const rows=sorted.map(r=>`
+
+<tr>
+
+<td><strong>${pct(r.probability)}</strong></td>
+
+<td><span class="badge ${r.seek_now?'badge-yes':'badge-no'}">${r.seek_now?'Contact Now':'Wait'}</span></td>
+
+<td style="text-align:center">${r.reassurance??'—'}</td>
+
+<td style="text-align:center">${r.fear??'—'}</td>
+
+<td style="text-align:center">${r.action??'—'}</td>
+
+<td style="text-align:center;color:#9ca3af">${(r.rt_decision_ms/1000).toFixed(1)}s</td>
+
+</tr>`).join('');
+
+
+
+const prolificBtn = RESEARCHER.prolificCompletionURL
+
+? `<a class="btn btn-primary" href="${RESEARCHER.prolificCompletionURL}" target="_blank">✅ Complete on Prolific →</a>` : '';
+
+
+
+return `
+
+<div class="card">
+
+<div class="text-center" style="padding-bottom:8px;">
+
+<div style="font-size:60px;margin-bottom:16px;">🏆</div>
+
+<h1 style="margin-bottom:10px;">Study Complete!</h1>
+
+<p style="font-size:17px;color:#374151;">You chose to contact the expedition in <strong>${seekCount} of ${total}</strong> rounds.</p>
+
+</div>
+
+
+
+<hr class="divider">
+
+<h3>Data Backup Status</h3>
+
+<div id="save-status-area">
+
+<div class="save-status">
+
+<span class="save-dot saving" id="save-dot"></span>
+
+<span id="save-msg">${RESEARCHER.sheetsWebAppURL?'Saving to researcher\'s server…':'Auto-save not configured — please download your data below.'}</span>
+
+</div>
+
+</div>
+
+
+
+<hr class="divider">
+
+<h3>Your Choices Across Risk Levels</h3>
+
+<table class="summary-table">
+
+<thead><tr><th>Mishap Risk</th><th>Your Choice</th><th style="text-align:center">Reassurance</th><th style="text-align:center">Fear</th><th style="text-align:center">Action</th><th style="text-align:center">Decision Time</th></tr></thead>
+
+<tbody>${rows}</tbody>
+
+</table>
+
+
+
+<hr class="divider">
+
+<h3>About This Study</h3>
+
+<div class="infobox ib-blue">${cd.debrief}</div>
+
+
+
+<hr class="divider">
+
+<h3>Download Your Data</h3>
+
+<p class="text-sm" style="margin-bottom:14px;">
+
+Participant ID: <strong>${S.pid}</strong> &nbsp;·&nbsp;
+
+Condition: <span class="cond-badge ${cd.cls}">${cd.label}</span> &nbsp;·&nbsp;
+
+Comprehension errors: <strong>${S.compErrors}</strong>
+
+</p>
+
+<div class="btn-row">
+
+${prolificBtn}
+
+<button class="btn btn-primary" onclick="dlCSV()">⬇ Download CSV</button>
+
+<button class="btn btn-secondary" onclick="dlJSON()">⬇ Download JSON</button>
+
+</div>
+
+</div>`;
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// GOOGLE SHEETS AUTO-SAVE
+
+// (Called automatically when end screen loads)
+
+// ═══════════════════════════════════════════════════════════════
+
+function attemptSheetsSave() {
+
+if (!RESEARCHER.sheetsWebAppURL) {
+
+updateSaveUI('failed', 'Auto-save not configured. Please use the Download buttons below to save your data.');
+
+return;
+
+}
+
+updateSaveUI('saving', 'Saving to researcher\'s server…');
+
+const payload = buildPayload();
+
+// Use GET with URL-encoded JSON (avoids CORS preflight)
+
+const url = RESEARCHER.sheetsWebAppURL + '?data=' + encodeURIComponent(JSON.stringify(payload));
+
+fetch(url, { mode: 'no-cors' })
+
+.then(() => updateSaveUI('saved', '✅ Data saved to researcher\'s server. Please also download CSV as backup.'))
+
+.catch(() => updateSaveUI('failed', '⚠️ Auto-save failed (network error). Please download your data below.'));
+
+}
+
+
+
+function updateSaveUI(status, msg) {
+
+S.saveStatus = status;
+
+const dot = document.getElementById('save-dot');
+
+const txt = document.getElementById('save-msg');
+
+if (dot) { dot.className = 'save-dot ' + status; }
+
+if (txt) { txt.textContent = msg; }
+
+}
+
+
+
+function buildPayload() {
+
+return {
+
+study: CFG.studyName,
+
+timestamp: new Date().toISOString(),
+
+pid: S.pid,
+
+prolific_pid: S.prolificPID || '',
+
+participant_name: S.participantName,
+
+participant_email: S.participantEmail,
+
+study_id: S.studyID || '',
+
+session_id: S.sessionID || '',
+
+condition: S.condition,
+
+condition_label: cond().label,
+
+condition_source:S.conditionSource,
+
+platform: S.platform,
+
+comp_errors: S.compErrors,
+
+wait_secs: RESEARCHER.waitSecs,
+
+trial_order: S.trialOrder.map(p=>+(p.toFixed(2))),
+
+responses: S.responses
+
+};
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// DATA EXPORT (CSV + JSON)
+
+// ═══════════════════════════════════════════════════════════════
+
+function dlCSV() {
+
+const cols = [
+
+'pid','prolific_pid','participant_name','participant_email',
+
+'platform','condition','condition_label','condition_source',
+
+'trial','probability','seek_now',
+
+'reassurance','fear','action',
+
+'rt_decision_ms','rt_wait_ms',
+
+'comp_errors','timestamp'
+
+];
+
+const ts = new Date().toISOString();
+
+const rows = S.responses.map(r => [
+
+S.pid, S.prolificPID||'', S.participantName, S.participantEmail,
+
+S.platform, S.condition, cond().label, S.conditionSource,
+
+r.trial, r.probability.toFixed(2), r.seek_now,
+
+r.reassurance??'', r.fear??'', r.action??'',
+
+r.rt_decision_ms, r.rt_wait_ms??0,
+
+S.compErrors, ts
+
+].map(v=>String(v).includes(',') ? `"${v}"` : v).join(','));
+
+dlFile([cols.join(','),...rows].join('\n'), `RS_${S.pid}.csv`, 'text/csv');
+
+}
+
+
+
+function dlJSON() {
+
+dlFile(JSON.stringify(buildPayload(), null, 2), `RS_${S.pid}.json`, 'application/json');
+
+}
+
+
+
+function dlFile(content, name, mime) {
+
+const url=URL.createObjectURL(new Blob([content],{type:mime}));
+
+const a=Object.assign(document.createElement('a'),{href:url,download:name});
+
+document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+URL.revokeObjectURL(url);
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+
+// START
+
+// ═══════════════════════════════════════════════════════════════
+
+init();
+
+</script>
+
+</body>
+
+</html>
+
+
