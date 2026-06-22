@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -171,7 +170,21 @@ strong { color: #111827; }
   font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 99px;
   letter-spacing: 0.4px; margin-bottom: 14px; text-transform: uppercase;
 }
+
+/* Round block in Likert end screen */
+.round-block {
+  border-top: 1px solid #e5e7eb; padding-top: 28px; margin-top: 28px;
+}
+.round-block:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.round-header {
+  background: #f9fafb; border-radius: 12px; padding: 14px 18px; margin-bottom: 22px;
+  font-size: 14px; color: #374151;
+}
+.round-header strong { color: #111827; }
 </style>
+<!-- Firebase SDK (compat v10 — works without ES modules) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -182,42 +195,62 @@ strong { color: #111827; }
 // ═══════════════════════════════════════════════════════════════
 const RESEARCHER = {
   // Google Sheets auto-backup.
-  // 1. Create a Google Apps Script web app (see DEPLOYMENT_GUIDE.md for code).
+  // 1. Create a Google Apps Script web app (see google_apps_script.js for code).
   // 2. Deploy it and paste the web app URL here.
   // Leave blank ('') to disable — participants must download CSV manually.
   sheetsWebAppURL: 'https://script.google.com/macros/s/AKfycbxQgPXeHqkUAs6hD74neYrIQKGfo3gpfEoGrEBqUqnmJtCn5tYxUYH8QfeSW6kfLbeg2Q/exec',
 
+  // ── Firebase config ──────────────────────────────────────────
+  // PRIMARY data store — handles high concurrency.
+  // Steps: https://console.firebase.google.com
+  //   1. Create project → Add web app → copy config below
+  //   2. Build → Firestore Database → Create (Production mode)
+  //   3. Rules tab → paste the rules from FIREBASE_SETUP.md → Publish
+  //   4. Fill in the values below (apiKey etc.)
+  // Leave as null to disable Firebase and fall back to Sheets only.
+  firebaseConfig: {
+    apiKey:            "AIzaSyCIM6_tme19BJNNhjc7G1GRssj_gTvNhiA",
+    authDomain:        "reassurance-study.firebaseapp.com",
+    projectId:         "reassurance-study",
+    storageBucket:     "reassurance-study.firebasestorage.app",
+    messagingSenderId: "762220390900",
+    appId:             "1:762220390900:web:890065a172a6a24dd5f1a1"
+  },
+
   // Prolific completion URL.
-  // Find this in your Prolific study under "What should participants do after completing?"
   // e.g. 'https://app.prolific.com/submissions/complete?cc=XXXXXXXX'
   // Leave blank if not using Prolific.
   prolificCompletionURL: '',
 
   // Wait time (seconds) when participant chooses "Contact now."
-  // Mimics the paper's 1-minute delay. Set to 0 for researcher testing.
-  waitSecs: 45
+  // Set to 0 for researcher testing (skips countdown, still reveals result).
+  waitSecs: 40,
+
+  // Messenger fee in points.
+  scoutFee: 5,
+
+  // Payment details (shown to participants in instructions).
+  pointValue:       0.50,   // $ per point
+  eligiblePct:      10,     // % of participants eligible for real payment
+  maxPayout:        50,     // $ max payout
+  paymentDelay:     '1 week'
 };
 
 // ═══════════════════════════════════════════════════════════════
 //  CONDITION ASSIGNMENT
 //
-//  BETWEEN-SUBJECTS via URL parameter — set this in your study link:
-//    ?condition=none   → No Instrumentality  (key for H1: probability reversal)
+//  BETWEEN-SUBJECTS via URL parameter:
+//    ?condition=none   → No Instrumentality  (H1: probability reversal)
 //    ?condition=low    → Low Instrumentality  (intermediate)
-//    ?condition=high   → High Instrumentality (key for H2: instrumentality reversal)
+//    ?condition=high   → High Instrumentality (H2: instrumentality reversal)
 //
 //  If not in URL, randomly assigned 50/50 between 'none' and 'high'.
-//
-//  RECOMMENDED FOR PROLIFIC: Create two separate study links:
-//    Study A: https://your-url/reassurance_experiment.html?condition=none
-//    Study B: https://your-url/reassurance_experiment.html?condition=high
-//  Target equal N per link. Prolific handles the participant routing.
-//  You can see which condition each participant was in via the CSV.
 // ═══════════════════════════════════════════════════════════════
 
 const CFG = {
   studyName:    'Reassurance-Seeking Experiment — Study 3',
-  coins:        100,
+  endowment:    105,   // total points given to participant
+  coins:        100,   // points at stake on the expedition bet
   probabilities: [0.10, 0.25, 0.50, 0.75, 0.90],
   conditions: {
     none: {
@@ -225,61 +258,83 @@ const CFG = {
       cls:        'cond-none',
       recoverable: 0,
       ifBadNews:  'there is <strong>nothing you can do</strong> — the result is final. You lose all 100 coins.',
-      nowDesc:    'Learn the result immediately. If bad news: lose 100 coins (no further action possible). If good news: keep 100.',
-      waitDesc:   'Find out later for free. The outcome is identical whether you contact them now or not.',
-      debrief:    'In your condition, information had <strong>no practical value</strong>. Our theory predicts that reassurance-seeking dominates: information-seeking should be <em>higher at low mishap probabilities</em> (when good news is likely and reassuring) than at high probabilities (when fear of bad news deters seeking).'
+      nowDesc:    'Send the messenger and learn the result. If bad news: nothing you can do — you lose all 100 coins. If good news: keep your coins (minus the messenger fee).',
+      waitDesc:   'Find out for free in 1 week when payments are processed. The outcome is identical whether or not you contact them now.',
+      debrief:    'In your condition, information had <strong>no practical value</strong> — knowing the outcome earlier could not change it. Our theory predicts that reassurance-seeking dominates: information-seeking should be <em>higher at low mishap probabilities</em> (when good news is likely and reassuring) than at high probabilities (when fear of bad news discourages seeking).'
     },
     low: {
       label:      'Low Instrumentality',
       cls:        'cond-low',
       recoverable: 20,
       ifBadNews:  'you can make a small corrective adjustment — saving <strong>20 coins</strong> (you lose 80 instead of 100).',
-      nowDesc:    'Learn the result immediately. If bad news: small correction saves 20 coins (you lose 80). If good news: keep 100.',
-      waitDesc:   'Find out later for free. Note: too late for the adjustment — you\'d lose all 100 on bad news.',
-      debrief:    'In your condition, information had <strong>limited practical value</strong> (saves only 20 of 100 coins). Our theory predicts that reassurance-seeking still dominates over instrumental value at low mishap probabilities.'
+      nowDesc:    'Send the messenger and learn the result. If bad news: small adjustment saves 20 coins (you lose 80). If good news: keep your coins (minus the messenger fee).',
+      waitDesc:   'Find out in 1 week when payments are processed — but too late for the adjustment. You\'d lose all 100 points on bad news.',
+      debrief:    'In your condition, information had <strong>limited practical value</strong> (saves only 20 of 100 coins on bad news). Our theory predicts that reassurance-seeking still dominates over instrumental value, especially at low mishap probabilities.'
     },
     high: {
       label:      'High Instrumentality',
       cls:        'cond-high',
       recoverable: 60,
       ifBadNews:  'you <strong>can redirect</strong> the expedition to a backup route — saving <strong>60 coins</strong> (you lose only 40 instead of 100).',
-      nowDesc:    'Learn the result immediately. If bad news: redirect saves 60 coins (you lose only 40). If good news: keep 100.',
-      waitDesc:   'Find out later for free. Note: too late to redirect — you\'d lose all 100 on bad news.',
-      debrief:    'In your condition, information had <strong>high practical value</strong> (saves 60 of 100 coins). Our theory predicts that instrumental value increases information-seeking, especially at higher mishap probabilities where bad news is more likely.'
+      nowDesc:    'Send the messenger and learn the result. If bad news: redirect saves 60 coins (you lose only 40). If good news: keep your coins (minus the messenger fee).',
+      waitDesc:   'Find out in 1 week when payments are processed — but too late to redirect. You\'d lose all 100 points on bad news.',
+      debrief:    'In your condition, information had <strong>high practical value</strong> (saves 60 of 100 coins on bad news). Our theory predicts that instrumental value increases information-seeking, especially at higher mishap probabilities where bad news is more likely.'
     }
   }
 };
+
+// ═══════════════════════════════════════════════════════════════
+//  FIREBASE INIT (runs once at load if config is provided)
+// ═══════════════════════════════════════════════════════════════
+let _db = null;
+(function initFirebase() {
+  if (!RESEARCHER.firebaseConfig) return;
+  try {
+    firebase.initializeApp(RESEARCHER.firebaseConfig);
+    _db = firebase.firestore();
+    // Enable offline persistence so a brief connectivity blip doesn't lose data
+    _db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+  } catch (e) {
+    console.warn('Firebase init failed:', e);
+  }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════════════
 const S = {
   screen:       'welcome',
-  condition:    null,     // 'none' | 'low' | 'high'
-  conditionSource: null,  // 'url' | 'random'
+  condition:    null,
+  conditionSource: null,
   pid:          null,
-  // Prolific / platform params (auto-detected from URL)
   prolificPID:  null,
   studyID:      null,
   sessionID:    null,
-  platform:     null,   // 'prolific' | 'mturk' | 'manual'
-  // Participant demographics
+  platform:     null,
   participantID:    '',
   participantName:  '',
   participantEmail: '',
-  // Experiment
   trialOrder:   [],
   currentTrial: 0,
   currentChoice: null,
+  currentOutcome: null,   // true = mishap occurred, false = no mishap, null = not contacted
   trialStartTime: null,
   responses:    [],
   compErrors:   0,
   compAnswers:  { q1: null, q2: null },
-  // Countdown
   countdownInterval:  null,
   countdownRemaining: 0,
-  // Data save
-  saveStatus: 'pending'   // 'pending' | 'saving' | 'saved' | 'failed'
+  saveStatus: 'pending',
+  debugMode: false,    // set to true via ?debug=1 in URL — shows researcher info
+  // Post-experiment survey (collected at likert_end)
+  survey: {
+    reassurance:    null,  // 1–7: "I contacted hoping for reassuring news"
+    fear_avoidance: null,  // 1–7: "At higher probabilities I avoided contact to avoid bad news"
+    instrumental:   null,  // 1–7: "I mainly contacted to take corrective action"
+    curiosity:      null,  // 1–7: "I contacted simply because I was curious"
+    pattern:        null,  // categorical: more_low | more_high | no_pattern | always | never
+    open_response:  ''     // free text
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -295,6 +350,7 @@ function pct(p)      { return (p*100).toFixed(0)+'%'; }
 function riskColor(p){ return p<=.20?'#22c55e':p<=.40?'#84cc16':p<=.60?'#f59e0b':p<=.80?'#f97316':'#ef4444'; }
 function riskWord(p) { return p<=.15?'Very Low Risk':p<=.35?'Low Risk':p<=.65?'Moderate Risk':p<=.80?'High Risk':'Very High Risk'; }
 function cond()      { return CFG.conditions[S.condition]; }
+function drawOutcome(p) { return Math.random() < p; } // true = mishap
 
 function render() {
   if (S.countdownInterval) { clearInterval(S.countdownInterval); S.countdownInterval=null; }
@@ -306,7 +362,8 @@ function render() {
     practice:      renderPractice,
     trial:         renderTrial,
     waiting:       renderWaiting,
-    process:       renderProcess,
+    result:        renderResult,
+    likert_end:    renderLikertEnd,
     end:           renderEnd
   }[S.screen] || renderWelcome;
   document.getElementById('root').innerHTML = fn();
@@ -322,12 +379,12 @@ function go(screen) { S.screen=screen; window.scrollTo(0,0); render(); }
 function init() {
   const p = new URLSearchParams(window.location.search);
 
-  // Condition
+  S.debugMode = p.get('debug') === '1';
+
   const c = p.get('condition');
   if (c==='none'||c==='low'||c==='high') { S.condition=c; S.conditionSource='url'; }
   else { S.condition=Math.random()<.5?'none':'high'; S.conditionSource='random'; }
 
-  // Platform detection
   const prolificPID = p.get('PROLIFIC_PID') || p.get('prolific_pid');
   const mturkWorker = p.get('workerId') || p.get('worker_id');
   if (prolificPID) {
@@ -343,7 +400,6 @@ function init() {
     S.platform     = 'manual';
   }
 
-  // Participant PID fallback
   S.pid = p.get('pid') || S.participantID || uid();
   S.trialOrder = shuffle([...CFG.probabilities]);
   render();
@@ -364,23 +420,29 @@ function renderWelcome() {
   <p style="font-size:17px;color:#374151;margin-bottom:28px;">A study on how people decide whether to seek information under uncertainty.</p>
 
   <div class="infobox ib-blue">
-    <strong>What you'll do:</strong> In each of 5 rounds, you have sponsored an expedition. A mishap may have occurred.
-    You decide whether to <em>contact the expedition now</em> (costs ~${RESEARCHER.waitSecs}s of waiting) or <em>wait until they return</em> (free, later).
-    The mishap probability changes each round.
+    <strong>What you'll do:</strong> In each of 5 independent rounds, you have sponsored an expedition. A mishap may have occurred.
+    You decide whether to <em>send a messenger to find out now</em> (costs your 5-point information budget + ~${RESEARCHER.waitSecs}s waiting) or <em>wait</em> (free — you'll find out in 1 week when payments are processed).
+    The mishap probability changes each round. Each round is <strong>independent</strong>. After all 5 decisions, you'll answer a few questions about how you felt.
   </div>
 
-  <p>One round will be randomly selected and played out for real, so please treat each decision seriously. The study takes about 10–12 minutes.</p>
+  <div class="infobox ib-green">
+    <strong>💰 Payment:</strong> Each point is worth <strong>$${RESEARCHER.pointValue.toFixed(2)}</strong>.
+    <strong>${RESEARCHER.eligiblePct}% of participants</strong> will be randomly selected to receive real payment (up to $${RESEARCHER.maxPayout}) based on one randomly chosen round.
+    Payments will be made <strong>${RESEARCHER.paymentDelay} from today</strong>. Please treat each decision as if it counts.
+  </div>
 
+  <p>The study takes about 10–12 minutes.</p>
+
+  ${S.debugMode ? `
   <hr class="divider">
-
-  <h3>Session Info (for researcher records)</h3>
+  <h3>🔬 Researcher Debug Info</h3>
   <div style="display:grid;gap:8px;font-size:13.5px;background:#f9fafb;padding:16px;border-radius:12px;border:1px solid #e5e7eb;">
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Participant ID</span> <strong>${S.pid}</strong></div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Platform</span> <strong>${S.platform}</strong>${S.prolificPID ? ' (Prolific ID: '+S.prolificPID+')' : ''}</div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Condition</span> <span class="cond-badge ${cd.cls}">${cd.label}</span></div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Assignment</span> <strong>${sourceNote}</strong></div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Trial order</span> <strong>${S.trialOrder.map(p=>(p*100).toFixed(0)+'%').join(' → ')}</strong></div>
-  </div>
+  </div>` : ''}
 
   <div class="btn-row">
     <button class="btn btn-primary" onclick="go('demographics')">Continue →</button>
@@ -467,26 +529,47 @@ function renderInstructions() {
   <span class="step-pill">Instructions</span>
   <h2>How the Study Works</h2>
 
-  <h3>Your Expedition</h3>
-  <p>You have sponsored an expedition to search for rare artifacts. You invested <strong>100 gold coins</strong> — already committed and non-refundable. The expedition is underway and the outcome has already been determined, but you don't know it yet.</p>
+  <h3>Your Points</h3>
+  <p>You receive two separate allocations of points for this study:</p>
+
+  <div class="coins-row" style="margin-bottom:12px;">
+    <span class="coins-icon">🎯</span>
+    <div>
+      <div class="coins-label">100 Points — Game Reward</div>
+      <div class="coins-sub">What you can win or lose based on the expedition outcome. This is the stake.</div>
+    </div>
+  </div>
   <div class="coins-row">
-    <span class="coins-icon">💰</span>
-    <div><div class="coins-label">100 Gold Coins Invested</div><div class="coins-sub">Non-refundable — outcome determined, unknown to you</div></div>
+    <span class="coins-icon">📡</span>
+    <div>
+      <div class="coins-label">5 Points — Information Budget</div>
+      <div class="coins-sub">Extra money given to you solely to pay for the messenger if you choose to use it. If you don't send the messenger, you keep these 5 points.</div>
+    </div>
   </div>
 
-  <h3>The Risk</h3>
-  <p>A mishap may have occurred. The <strong>probability of a mishap</strong> varies across rounds. Mishap → you lose 100 coins. No mishap → you keep 100 coins.</p>
+  <p style="margin-top:4px;">Each point is worth <strong>$${RESEARCHER.pointValue.toFixed(2)}</strong>. Your maximum possible earnings are <strong>105 points = $${(CFG.endowment * RESEARCHER.pointValue).toFixed(2)}</strong> (if no mishap and you kept your information budget).</p>
+
+  <h3>The Expedition</h3>
+  <p>You have sponsored an expedition to search for rare artifacts. The outcome has already been determined, but you don't know it yet. If a mishap occurred, you lose the 100-point game reward. If no mishap, you keep it.</p>
 
   <h3>Your Decision</h3>
-  <p>You may <strong>send a messenger to get an update now</strong> — but only if you decide immediately. The messenger takes about <strong>${RESEARCHER.waitSecs} seconds</strong> to travel and return. If you wait, you learn the outcome for free when the expedition returns.</p>
+  <p>You may <strong>send a messenger to find out the result now</strong>. The messenger travels and returns in about <strong>${RESEARCHER.waitSecs} seconds</strong>, then tells you what actually happened so you can respond accordingly.</p>
 
-  <div class="infobox ${boxCls}">
-    <strong>⚠️ If you contact them and hear bad news (mishap occurred):</strong><br><br>
-    ${cd.ifBadNews}
-    ${!isNone?'<br><br><em>If you wait instead, it will be too late for this action.</em>':''}
+  <div class="infobox ib-amber" style="margin-bottom:16px;">
+    <strong>💰 Sending the messenger costs your ${RESEARCHER.scoutFee}-point information budget.</strong> This comes from the extra allocation, <em>not</em> from your 100-point game reward. If you choose to wait, you keep the 5 points and learn the outcome in <strong>1 week</strong> when payments are processed.
   </div>
 
-  <p>You make this decision across <strong>5 rounds</strong> with different mishap probabilities. After each choice, you answer 3 quick questions. At the end, one round is randomly selected for real play.</p>
+  <div class="infobox ${boxCls}">
+    <strong>⚠️ If the messenger returns with bad news (mishap occurred):</strong><br><br>
+    ${cd.ifBadNews}
+    ${!isNone?'<br><br><em>If you wait instead of contacting them, it will be too late for this action.</em>':''}
+  </div>
+
+  <div class="infobox ib-gray">
+    <strong>📋 Each round is independent.</strong> The expedition and mishap probability are different in each round. Your choice in one round has no effect on any other round. One round will be randomly selected at the end, and ${RESEARCHER.eligiblePct}% of participants will receive real payment based on that round's outcome — up to $${RESEARCHER.maxPayout}, paid <strong>${RESEARCHER.paymentDelay}</strong> from today.
+  </div>
+
+  <p>You make this decision across <strong>5 rounds</strong> with different mishap probabilities. After all 5 rounds, you'll answer a brief set of questions about your decisions.</p>
 
   <div class="btn-row">
     <button class="btn btn-secondary" onclick="go('demographics')">← Back</button>
@@ -508,7 +591,7 @@ function renderComprehension() {
   <p>Answer both questions. Wrong answers are shown in red; correct answers in green. You may re-read the instructions and try again.</p>
 
   <div class="comp-item">
-    <p class="comp-q">1. If you contact the expedition and hear bad news (mishap occurred), what happens?</p>
+    <p class="comp-q">1. If you send the messenger and they return with bad news (mishap occurred), what happens?</p>
     <label class="radio-option" id="q1-a"><input type="radio" name="q1" value="a" onchange="S.compAnswers.q1='a'">
       <span>You receive a full refund of all 100 coins.</span></label>
     <label class="radio-option" id="q1-b"><input type="radio" name="q1" value="b" onchange="S.compAnswers.q1='b'">
@@ -522,13 +605,13 @@ function renderComprehension() {
   </div>
 
   <div class="comp-item">
-    <p class="comp-q">2. If you choose to contact the expedition, what happens before you see the result?</p>
+    <p class="comp-q">2. If you choose to send the messenger, what happens?</p>
     <label class="radio-option" id="q2-a"><input type="radio" name="q2" value="a" onchange="S.compAnswers.q2='a'">
-      <span>You learn the result instantly and for free.</span></label>
+      <span>You pay a fee and learn the result instantly.</span></label>
     <label class="radio-option" id="q2-b"><input type="radio" name="q2" value="b" onchange="S.compAnswers.q2='b'">
-      <span>You wait about ${RESEARCHER.waitSecs} seconds while the messenger travels and returns.</span></label>
+      <span>You pay a small fee (${RESEARCHER.scoutFee} coins) and wait about ${RESEARCHER.waitSecs} seconds, then the messenger returns and tells you what happened.</span></label>
     <label class="radio-option" id="q2-c"><input type="radio" name="q2" value="c" onchange="S.compAnswers.q2='c'">
-      <span>You pay a coin fee, then learn instantly.</span></label>
+      <span>You wait for free and then learn the result.</span></label>
   </div>
 
   <div id="comp-error" class="error-msg hidden">Please answer both questions.</div>
@@ -577,7 +660,7 @@ function renderPractice() {
   <h2>Expedition Decision — Practice</h2>
   <div class="coins-row">
     <span class="coins-icon">💰</span>
-    <div><div class="coins-label">100 Coins at Stake</div><div class="coins-sub">Outcome determined — unknown to you</div></div>
+    <div><div class="coins-label">100 pts game reward + 5 pts info budget</div><div class="coins-sub">Sending the messenger spends the 5-pt budget · outcome unknown</div></div>
   </div>
   <div class="risk-box">
     <div class="risk-top">
@@ -591,30 +674,61 @@ function renderPractice() {
     </div>
   </div>
   <div class="infobox ${isNone?'ib-amber':isHigh?'ib-green':'ib-red'}">
-    <strong>If you contact them and hear bad news:</strong><br>${cd.ifBadNews}
+    <strong>If the messenger returns with bad news:</strong><br>${cd.ifBadNews}
   </div>
   <h3>What would you like to do?</h3>
   <button class="choice-btn" id="p-now" onclick="practiceChoose('now')">
-    <div class="c-title">📡 Contact the expedition — learn the result now</div>
+    <div class="c-title">📡 Send the messenger — learn the result now</div>
     <div class="c-desc">${cd.nowDesc}</div>
-    <span class="c-cost">⏱ Wait ~${RESEARCHER.waitSecs} seconds for the messenger</span>
+    <span class="c-cost">⏱ ~${RESEARCHER.waitSecs}s wait &nbsp;·&nbsp; 💰 ${RESEARCHER.scoutFee} coin fee</span>
   </button>
   <button class="choice-btn" id="p-wait" onclick="practiceChoose('wait')">
     <div class="c-title">⏳ Wait until they return — find out later, for free</div>
     <div class="c-desc">${cd.waitDesc}</div>
   </button>
-  <div id="practice-next" class="hidden mt-24">
-    <div class="infobox ib-gray">Good. In real rounds, you also answer 3 brief questions after each choice. If you choose "Contact now," the ${RESEARCHER.waitSecs}-second wait begins immediately.</div>
-    <div class="btn-row"><button class="btn btn-primary" onclick="startTrials()">Start Round 1 of 5 →</button></div>
-  </div>
+  <div id="practice-next" class="hidden mt-24"></div>
 </div>`;
 }
 
 function practiceChoose(v) {
-  document.getElementById('p-now').classList.toggle('selected',v==='now');
-  document.getElementById('p-wait').classList.toggle('selected',v==='wait');
-  document.getElementById('practice-next').classList.remove('hidden');
+  document.getElementById('p-now').classList.toggle('selected', v==='now');
+  document.getElementById('p-wait').classList.toggle('selected', v==='wait');
+  const nextDiv = document.getElementById('practice-next');
+  nextDiv.classList.remove('hidden');
+
+  if (v === 'now') {
+    // Draw a random outcome for the practice round and reveal it immediately
+    const mishap = drawOutcome(0.50);
+    const cd = cond();
+    let resultHTML;
+    if (!mishap) {
+      resultHTML = `<div class="infobox ib-green">✅ <strong>Good news!</strong> No mishap — the expedition is safe. You keep your coins (minus the ${RESEARCHER.scoutFee}-coin messenger fee).</div>`;
+    } else if (S.condition === 'none') {
+      resultHTML = `<div class="infobox ib-red">⚠️ <strong>Bad news.</strong> A mishap occurred. There is nothing you can do — you lose all 100 coins.</div>`;
+    } else if (S.condition === 'low') {
+      resultHTML = `<div class="infobox ib-amber">⚠️ <strong>Bad news.</strong> A mishap occurred. Small adjustment saves 20 coins — you lose 80.</div>`;
+    } else {
+      resultHTML = `<div class="infobox ib-amber">⚠️ <strong>Bad news.</strong> A mishap occurred. You redirect the expedition — saving 60 coins. You lose only 40.</div>`;
+    }
+    nextDiv.innerHTML = `
+      ${resultHTML}
+      <div class="infobox ib-gray" style="margin-top:14px;">
+        In real rounds, you wait <strong>${RESEARCHER.waitSecs} seconds</strong> before the messenger returns with the result.
+        After completing all 5 rounds, you'll rate how you felt during each decision.
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="startTrials()">Start Round 1 of 5 →</button></div>
+    `;
+  } else {
+    nextDiv.innerHTML = `
+      <div class="infobox ib-gray">
+        ⏳ You chose to wait. The outcome remains unknown until the expedition returns.<br><br>
+        In real rounds, you proceed to the next decision immediately. After all 5 rounds, you'll rate how you felt during each decision.
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="startTrials()">Start Round 1 of 5 →</button></div>
+    `;
+  }
 }
+
 function startTrials() { S.currentTrial=0; S.currentChoice=null; S.trialStartTime=Date.now(); go('trial'); }
 
 // ═══════════════════════════════════════════════════════════════
@@ -633,7 +747,7 @@ function renderTrial() {
   <h2>Expedition Decision</h2>
   <div class="coins-row">
     <span class="coins-icon">💰</span>
-    <div><div class="coins-label">100 Coins at Stake</div><div class="coins-sub">Already invested — outcome determined, unknown to you</div></div>
+    <div><div class="coins-label">100 pts game reward + 5 pts info budget</div><div class="coins-sub">Each round is independent · outcome already determined, unknown to you</div></div>
   </div>
   <div class="risk-box">
     <div class="risk-top">
@@ -647,13 +761,13 @@ function renderTrial() {
     </div>
   </div>
   <div class="infobox ${isNone?'ib-amber':isHigh?'ib-green':'ib-red'}">
-    <strong>Reminder — if you contact them and hear bad news:</strong><br>${cd.ifBadNews}
+    <strong>Reminder — if the messenger returns with bad news:</strong><br>${cd.ifBadNews}
   </div>
   <h3>What would you like to do?</h3>
   <button class="choice-btn" id="t-now" onclick="trialChoose('now')">
-    <div class="c-title">📡 Contact the expedition — learn the result now</div>
+    <div class="c-title">📡 Send the messenger — learn the result now</div>
     <div class="c-desc">${cd.nowDesc}</div>
-    <span class="c-cost">⏱ Wait ~${RESEARCHER.waitSecs} seconds for the messenger</span>
+    <span class="c-cost">⏱ ~${RESEARCHER.waitSecs}s wait &nbsp;·&nbsp; 💰 ${RESEARCHER.scoutFee} coin fee</span>
   </button>
   <button class="choice-btn" id="t-wait" onclick="trialChoose('wait')">
     <div class="c-title">⏳ Wait until they return — find out later, for free</div>
@@ -674,17 +788,30 @@ function trialChoose(v) {
 function submitTrial() {
   if (!S.currentChoice) { document.getElementById('trial-err').classList.remove('hidden'); return; }
   S.responses.push({
-    pid: S.pid, prolific_pid: S.prolificPID||'', condition: S.condition,
-    trial: S.currentTrial+1, probability: S.trialOrder[S.currentTrial],
-    seek_now: S.currentChoice==='now'?1:0,
+    trial:         S.currentTrial+1,
+    probability:   S.trialOrder[S.currentTrial],
+    seek_now:      S.currentChoice==='now'?1:0,
     rt_decision_ms: Date.now()-S.trialStartTime,
-    rt_wait_ms: 0,
-    reassurance: null, fear: null, action: null
+    rt_wait_ms:    0,
+    outcome:       null,   // filled in if they contact the expedition
+    reassurance:   null,   // filled in at likert_end
+    fear:          null,
+    action:        null
   });
-  if (S.currentChoice==='now' && RESEARCHER.waitSecs>0) {
-    S.countdownRemaining=RESEARCHER.waitSecs; go('waiting');
+
+  if (S.currentChoice === 'now') {
+    if (RESEARCHER.waitSecs > 0) {
+      S.countdownRemaining = RESEARCHER.waitSecs;
+      go('waiting');
+    } else {
+      // Testing mode: skip countdown, draw outcome immediately
+      revealOutcome();
+      go('result');
+    }
   } else {
-    S.currentChoice=null; go('process');
+    // Wait choice: advance directly to next trial (no result revealed)
+    S.currentChoice = null;
+    advanceTrial();
   }
 }
 
@@ -697,7 +824,7 @@ function renderWaiting() {
   return `
 <div class="card">
   <div class="infobox ib-purple" style="margin-bottom:32px;">
-    📡 <strong>Messenger dispatched.</strong> Waiting for them to travel and return with news…
+    📡 <strong>Messenger dispatched.</strong> Waiting for them to travel to the expedition and return with news…
   </div>
   <div class="countdown-wrap">
     <div class="countdown-circle">
@@ -708,12 +835,12 @@ function renderWaiting() {
       </svg>
       <span id="countdown-num">${RESEARCHER.waitSecs}</span>
     </div>
-    <div class="countdown-label" id="countdown-label">Waiting for the messenger…</div>
+    <div class="countdown-label" id="countdown-label">Messenger en route…</div>
     <div class="countdown-sub">This round: <strong>${pct(p)} mishap probability</strong></div>
   </div>
-  <div id="countdown-done" class="hidden text-center mt-24">
-    <div class="infobox ib-blue" style="margin-bottom:20px;">✅ The messenger has returned with news!</div>
-    <button class="btn btn-primary" onclick="afterWait()">See the result and continue →</button>
+  <div id="countdown-done" class="hidden" style="text-align:center;margin-top:24px;">
+    <div class="infobox ib-blue" style="margin-bottom:20px;">📬 The messenger has returned with news!</div>
+    <button class="btn btn-primary" onclick="afterWait()">See what they found →</button>
   </div>
 </div>`;
 }
@@ -736,57 +863,187 @@ function startCountdown() {
       const resp=S.responses[S.responses.length-1];
       if(resp) resp.rt_wait_ms=Date.now()-waitStart;
       if(num) num.textContent='0';
-      if(lbl) lbl.textContent='Done!';
+      if(lbl) lbl.textContent='Messenger returned!';
       const done=document.getElementById('countdown-done');
       if(done) done.classList.remove('hidden');
     }
   },1000);
 }
 
-function afterWait() { S.currentChoice=null; go('process'); }
+function revealOutcome() {
+  const p = S.trialOrder[S.currentTrial];
+  S.currentOutcome = drawOutcome(p);
+  const resp = S.responses[S.responses.length-1];
+  if (resp) resp.outcome = S.currentOutcome ? 'mishap' : 'none';
+}
+
+function afterWait() {
+  revealOutcome();
+  go('result');
+}
 
 // ═══════════════════════════════════════════════════════════════
-//  SCREEN: PROCESS MEASURES
+//  SCREEN: RESULT (shown after messenger returns)
 // ═══════════════════════════════════════════════════════════════
-function renderProcess() {
-  const resp=S.responses[S.responses.length-1];
-  const p=resp.probability, total=S.trialOrder.length;
-  const choiceLabel=resp.seek_now?'contact the expedition now':'wait until they return';
-  function lk(name,q){
-    const opts=[1,2,3,4,5,6,7].map(v=>`<input type="radio" name="${name}" id="${name}${v}" value="${v}"><label for="${name}${v}">${v}</label>`).join('');
-    return `<div class="likert-group"><div class="likert-q">${q}</div><div class="likert-scale">${opts}</div><div class="likert-ends"><span>Strongly Disagree</span><span>Strongly Agree</span></div></div>`;
+function renderResult() {
+  const mishap = S.currentOutcome;
+  const cd = cond();
+  const p = S.trialOrder[S.currentTrial];
+  const round = S.currentTrial + 1;
+  const total = S.trialOrder.length;
+  const isLast = (S.currentTrial + 1) >= total;
+
+  let headline, body, boxCls;
+  const fee = RESEARCHER.scoutFee;
+  if (!mishap) {
+    headline = '✅ Good news — no mishap!';
+    body = `The expedition is safe. No corrective action needed.
+      <br><br><em>If this round is selected: <strong>${CFG.endowment - fee} points</strong> (105 − ${fee} messenger fee = ${CFG.endowment - fee} pts = $${((CFG.endowment - fee) * RESEARCHER.pointValue).toFixed(2)}).</em>`;
+    boxCls = 'ib-green';
+  } else if (S.condition === 'none') {
+    headline = '⚠️ Bad news — a mishap occurred.';
+    body = `There is nothing you can do — the result is final. You lose the 100-point bet.
+      <br><br><em>If this round is selected: <strong>${fee > 0 ? 0 : 0} points</strong> (you lose the 100-pt bet; messenger fee already spent = 0 pts = $0.00).</em>`;
+    boxCls = 'ib-red';
+  } else if (S.condition === 'low') {
+    headline = '⚠️ Bad news — a mishap occurred.';
+    body = `You make a small corrective adjustment, saving 20 points. You lose 80 instead of 100.
+      <br><br><em>If this round is selected: <strong>${CFG.endowment - fee - 80} points</strong> (105 − ${fee} fee − 80 loss = ${CFG.endowment - fee - 80} pts = $${((CFG.endowment - fee - 80) * RESEARCHER.pointValue).toFixed(2)}).</em>`;
+    boxCls = 'ib-amber';
+  } else {
+    headline = '⚠️ Bad news — a mishap occurred.';
+    body = `You redirect the expedition to a backup route, saving 60 points. You lose only 40 instead of 100.
+      <br><br><em>If this round is selected: <strong>${CFG.endowment - fee - 40} points</strong> (105 − ${fee} fee − 40 loss = ${CFG.endowment - fee - 40} pts = $${((CFG.endowment - fee - 40) * RESEARCHER.pointValue).toFixed(2)}).</em>`;
+    boxCls = 'ib-amber';
   }
+
   return `
 <div class="card">
   <div class="progress-wrap">
-    <div class="progress-meta"><span>Round ${resp.trial} of ${total} — Follow-Up</span><span>${pct(p)} mishap probability</span></div>
-    <div class="progress-track"><div class="progress-fill" style="width:${(resp.trial/total)*100}%"></div></div>
+    <div class="progress-meta"><span>Round ${round} of ${total} — Result</span><span>${pct(p)} mishap probability</span></div>
+    <div class="progress-track"><div class="progress-fill" style="width:${(round/total)*100}%"></div></div>
   </div>
-  <h2>A Few Questions</h2>
-  <p>You chose to <strong>${choiceLabel}</strong> when there was a <strong>${pct(p)} chance</strong> of a mishap. Rate how much you agree with each statement, reflecting your thoughts <em>at the moment you decided</em>.</p>
-  <hr class="divider">
-  ${lk('reassurance','1. &ldquo;I expected that contacting the expedition would <strong>reassure me</strong> that everything was fine.&rdquo;')}
-  ${lk('fear','2. &ldquo;I <strong>feared</strong> that contacting the expedition might bring bad news.&rdquo;')}
-  ${lk('action','3. &ldquo;I wanted to contact the expedition so that I could <strong>take action</strong> based on the result.&rdquo;')}
-  <div id="proc-err" class="error-msg hidden">Please answer all three questions.</div>
+  <h2>The Messenger's Report</h2>
+  <div class="infobox ${boxCls}" style="font-size:16px;">
+    <strong>${headline}</strong><br><br>${body}
+  </div>
   <div class="btn-row">
-    <button class="btn btn-primary" onclick="submitProcess()">
-      ${S.currentTrial+1<S.trialOrder.length?'Next Round →':'Finish Study →'}
+    <button class="btn btn-primary" onclick="afterResult()">
+      ${isLast ? 'Answer Questions →' : 'Next Round →'}
     </button>
   </div>
 </div>`;
 }
 
-function submitProcess() {
-  const r=document.querySelector('input[name="reassurance"]:checked');
-  const f=document.querySelector('input[name="fear"]:checked');
-  const a=document.querySelector('input[name="action"]:checked');
-  if(!r||!f||!a){document.getElementById('proc-err').classList.remove('hidden');return;}
-  const resp=S.responses[S.responses.length-1];
-  resp.reassurance=parseInt(r.value); resp.fear=parseInt(f.value); resp.action=parseInt(a.value);
+function afterResult() {
+  S.currentOutcome = null;
+  S.currentChoice = null;
+  advanceTrial();
+}
+
+function advanceTrial() {
   S.currentTrial++;
-  if(S.currentTrial<S.trialOrder.length){S.trialStartTime=Date.now();go('trial');}
-  else go('end');
+  if (S.currentTrial < S.trialOrder.length) {
+    S.trialStartTime = Date.now();
+    go('trial');
+  } else {
+    go('likert_end');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SCREEN: POST-EXPERIMENT SURVEY
+// ═══════════════════════════════════════════════════════════════
+function renderLikertEnd() {
+  // Build a brief summary of their choices for context
+  const sorted = [...S.responses].sort((a,b) => a.probability - b.probability);
+  const choiceSummary = sorted.map(r =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;margin:3px 4px;font-size:13px;background:${r.seek_now?'#eff6ff':'#f9fafb'};border:1px solid ${r.seek_now?'#bfdbfe':'#e5e7eb'};border-radius:99px;padding:3px 11px;font-weight:600;color:${r.seek_now?'#1d4ed8':'#6b7280'};">
+      ${pct(r.probability)}: ${r.seek_now?'📡 Sent':'⏳ Waited'}
+    </span>`
+  ).join('');
+
+  function lk(name, q) {
+    const opts = [1,2,3,4,5,6,7].map(v =>
+      `<input type="radio" name="${name}" id="${name}_${v}" value="${v}"><label for="${name}_${v}">${v}</label>`
+    ).join('');
+    return `<div class="likert-group">
+      <div class="likert-q">${q}</div>
+      <div class="likert-scale">${opts}</div>
+      <div class="likert-ends"><span>Strongly Disagree</span><span>Strongly Agree</span></div>
+    </div>`;
+  }
+
+  const patternOpts = [
+    ['more_low',  '📉 I sent the messenger more when the mishap probability was <strong>low</strong>'],
+    ['more_high', '📈 I sent the messenger more when the mishap probability was <strong>high</strong>'],
+    ['no_pattern','🔀 My choices didn\'t follow a clear pattern across probability levels'],
+    ['always',    '✅ I sent the messenger in every round'],
+    ['never',     '⏳ I never sent the messenger']
+  ];
+
+  return `
+<div class="card">
+  <span class="step-pill">Reflection</span>
+  <h2>A Few Questions</h2>
+  <p>You've completed all 5 rounds. Here's a quick summary of your choices:</p>
+  <div style="margin-bottom:24px;line-height:2;">${choiceSummary}</div>
+
+  <hr class="divider">
+
+  <h3>Your Pattern of Choices</h3>
+  <p style="font-size:15px;color:#374151;margin-bottom:18px;">Which best describes how your choices changed (or didn't) as the mishap probability increased?</p>
+  ${patternOpts.map(([val,label])=>`
+  <label class="radio-option" id="pat-${val}">
+    <input type="radio" name="pattern" value="${val}" onchange="S.survey.pattern='${val}'">
+    <span>${label}</span>
+  </label>`).join('')}
+
+  <div style="margin-top:20px;">
+    <div class="likert-q" style="margin-bottom:10px;">In your own words — why did you make the choices you did? What was going through your mind?</div>
+    <textarea id="open-response" rows="4" placeholder="Describe your reasoning here…"
+      style="width:100%;padding:12px 16px;border:2px solid #e5e7eb;border-radius:10px;font-size:15px;font-family:inherit;resize:vertical;outline:none;"
+      oninput="S.survey.open_response=this.value"
+      onfocus="this.style.borderColor='#3b82f6'"
+      onblur="this.style.borderColor='#e5e7eb'"></textarea>
+  </div>
+
+  <hr class="divider">
+
+  <h3>What Drove Your Decisions?</h3>
+  <p style="font-size:14px;color:#6b7280;margin-bottom:22px;">Rate how much each statement describes your overall motivation across the rounds. Use 1 (Strongly Disagree) to 7 (Strongly Agree).</p>
+
+  ${lk('reassurance', '1. &ldquo;I sent the messenger mainly to get <strong>reassuring news</strong> — hoping to hear that everything was fine.&rdquo;')}
+  ${lk('fear_avoid',  '2. &ldquo;At <strong>higher mishap probabilities</strong>, I was less willing to contact the expedition because I <strong>feared receiving bad news</strong>.&rdquo;')}
+  ${lk('instrumental','3. &ldquo;I sent the messenger mainly because I wanted to be able to <strong>take corrective action</strong> if something had gone wrong.&rdquo;')}
+  ${lk('curiosity',   '4. &ldquo;I sent the messenger simply because I was <strong>curious</strong> about what had happened — I just wanted to know.&rdquo;')}
+
+  <div id="likert-err" class="error-msg hidden">Please answer all three rating questions and select a pattern before continuing.</div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="submitLikertEnd()">Complete Study →</button>
+  </div>
+</div>`;
+}
+
+function submitLikertEnd() {
+  const r   = document.querySelector('input[name="reassurance"]:checked');
+  const f   = document.querySelector('input[name="fear_avoid"]:checked');
+  const a   = document.querySelector('input[name="instrumental"]:checked');
+  const cur = document.querySelector('input[name="curiosity"]:checked');
+  const pat = S.survey.pattern;
+
+  if (!r || !f || !a || !cur || !pat) {
+    showErr('likert-err', 'Please answer all four rating questions and select a choice pattern before continuing.');
+    return;
+  }
+
+  S.survey.reassurance    = parseInt(r.value);
+  S.survey.fear_avoidance = parseInt(f.value);
+  S.survey.instrumental   = parseInt(a.value);
+  S.survey.curiosity      = parseInt(cur.value);
+  S.survey.open_response  = document.getElementById('open-response').value.trim();
+
+  go('end');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -797,15 +1054,22 @@ function renderEnd() {
   const seekCount=S.responses.filter(r=>r.seek_now).length;
   const total=S.responses.length;
   const sorted=[...S.responses].sort((a,b)=>a.probability-b.probability);
-  const rows=sorted.map(r=>`
+  const rows=sorted.map(r=>{
+    const outcomeCell = r.outcome === 'mishap'
+      ? '<span class="badge" style="background:#fee2e2;color:#991b1b;">Mishap</span>'
+      : r.outcome === 'none'
+      ? '<span class="badge" style="background:#dcfce7;color:#166534;">No Mishap</span>'
+      : '<span style="color:#9ca3af;font-size:13px;">—</span>';
+    return `
     <tr>
       <td><strong>${pct(r.probability)}</strong></td>
-      <td><span class="badge ${r.seek_now?'badge-yes':'badge-no'}">${r.seek_now?'Contact Now':'Wait'}</span></td>
+      <td><span class="badge ${r.seek_now?'badge-yes':'badge-no'}">${r.seek_now?'Sent Messenger':'Waited'}</span></td>
+      <td style="text-align:center">${outcomeCell}</td>
       <td style="text-align:center">${r.reassurance??'—'}</td>
       <td style="text-align:center">${r.fear??'—'}</td>
       <td style="text-align:center">${r.action??'—'}</td>
-      <td style="text-align:center;color:#9ca3af">${(r.rt_decision_ms/1000).toFixed(1)}s</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   const prolificBtn = RESEARCHER.prolificCompletionURL
     ? `<a class="btn btn-primary" href="${RESEARCHER.prolificCompletionURL}" target="_blank">✅ Complete on Prolific →</a>` : '';
@@ -815,7 +1079,7 @@ function renderEnd() {
   <div class="text-center" style="padding-bottom:8px;">
     <div style="font-size:60px;margin-bottom:16px;">🏆</div>
     <h1 style="margin-bottom:10px;">Study Complete!</h1>
-    <p style="font-size:17px;color:#374151;">You chose to contact the expedition in <strong>${seekCount} of ${total}</strong> rounds.</p>
+    <p style="font-size:17px;color:#374151;">You sent the messenger in <strong>${seekCount} of ${total}</strong> rounds.</p>
   </div>
 
   <hr class="divider">
@@ -823,14 +1087,21 @@ function renderEnd() {
   <div id="save-status-area">
     <div class="save-status">
       <span class="save-dot saving" id="save-dot"></span>
-      <span id="save-msg">${RESEARCHER.sheetsWebAppURL?'Saving to researcher\'s server…':'Auto-save not configured — please download your data below.'}</span>
+      <span id="save-msg">${RESEARCHER.firebaseConfig?'Saving to Firebase…':RESEARCHER.sheetsWebAppURL?'Saving to Google Sheets…':'Auto-save not configured — please download your data below.'}</span>
     </div>
   </div>
 
   <hr class="divider">
   <h3>Your Choices Across Risk Levels</h3>
   <table class="summary-table">
-    <thead><tr><th>Mishap Risk</th><th>Your Choice</th><th style="text-align:center">Reassurance</th><th style="text-align:center">Fear</th><th style="text-align:center">Action</th><th style="text-align:center">Decision Time</th></tr></thead>
+    <thead><tr>
+      <th>Mishap Risk</th>
+      <th>Your Choice</th>
+      <th style="text-align:center">Outcome</th>
+      <th style="text-align:center">Reassurance</th>
+      <th style="text-align:center">Fear</th>
+      <th style="text-align:center">Action</th>
+    </tr></thead>
     <tbody>${rows}</tbody>
   </table>
 
@@ -854,33 +1125,61 @@ function renderEnd() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  GOOGLE SHEETS AUTO-SAVE
-//  (Called automatically when end screen loads)
+//  AUTO-SAVE  (Firebase primary → Google Sheets fallback)
 // ═══════════════════════════════════════════════════════════════
-function attemptSheetsSave() {
-  if (!RESEARCHER.sheetsWebAppURL) {
+function attemptSheetsSave() {   // called from render() — name kept for compatibility
+  if (_db) {
+    saveToFirebase();
+  } else if (RESEARCHER.sheetsWebAppURL) {
+    saveToSheets();
+  } else {
     updateSaveUI('failed', 'Auto-save not configured. Please download CSV below.');
-    return;
   }
+}
+
+function saveToFirebase() {
+  updateSaveUI('saving', 'Saving to Firebase…');
+  const payload = buildPayload();
+  // Use pid as document ID — prevents duplicate documents if page is reloaded
+  _db.collection('responses').doc(S.pid).set(payload)
+    .then(() => {
+      updateSaveUI('saved', '✅ Data saved to Firebase. Download CSV below as your own backup.');
+      // Also attempt Sheets as a secondary backup (don't update UI on result)
+      if (RESEARCHER.sheetsWebAppURL) saveToSheetsSilent();
+    })
+    .catch(err => {
+      console.warn('Firebase save failed, trying Sheets:', err);
+      updateSaveUI('saving', '⚠️ Firebase failed — trying backup server…');
+      if (RESEARCHER.sheetsWebAppURL) {
+        saveToSheets();
+      } else {
+        updateSaveUI('failed', `⚠️ Save failed: ${err.message}. Download CSV below.`);
+      }
+    });
+}
+
+function saveToSheets() {
   updateSaveUI('saving', 'Saving to Google Sheets…');
   const payload = buildPayload();
   const url = RESEARCHER.sheetsWebAppURL + '?data=' + encodeURIComponent(JSON.stringify(payload));
-
-  // No 'no-cors' — we need to read the response to know if it worked.
-  // Google Apps Script deployed as "Anyone" handles CORS automatically.
   fetch(url)
     .then(r => r.json())
     .then(resp => {
       if (resp.status === 'ok') {
-        updateSaveUI('saved', `✅ ${resp.rows} trial rows saved to Google Sheets. Also download CSV as backup.`);
+        updateSaveUI('saved', `✅ ${resp.rows} rows saved to Google Sheets. Download CSV as backup.`);
       } else {
-        updateSaveUI('failed', `⚠️ Apps Script error: ${resp.message || 'unknown'}. Download CSV below.`);
+        updateSaveUI('failed', `⚠️ Sheets error: ${resp.message || 'unknown'}. Download CSV below.`);
       }
     })
     .catch(err => {
-      // Show the real error so we can debug it
       updateSaveUI('failed', `⚠️ Save failed: ${err.message}. Download CSV below.`);
     });
+}
+
+function saveToSheetsSilent() {
+  const payload = buildPayload();
+  const url = RESEARCHER.sheetsWebAppURL + '?data=' + encodeURIComponent(JSON.stringify(payload));
+  fetch(url).catch(() => {});  // silent fallback — Firebase already confirmed save
 }
 
 function updateSaveUI(status, msg) {
@@ -893,22 +1192,29 @@ function updateSaveUI(status, msg) {
 
 function buildPayload() {
   return {
-    study:           CFG.studyName,
-    timestamp:       new Date().toISOString(),
-    pid:             S.pid,
-    prolific_pid:    S.prolificPID || '',
+    study:             CFG.studyName,
+    timestamp:         new Date().toISOString(),
+    pid:               S.pid,
+    prolific_pid:      S.prolificPID || '',
     participant_name:  S.participantName,
     participant_email: S.participantEmail,
-    study_id:        S.studyID || '',
-    session_id:      S.sessionID || '',
-    condition:       S.condition,
-    condition_label: cond().label,
-    condition_source:S.conditionSource,
-    platform:        S.platform,
-    comp_errors:     S.compErrors,
-    wait_secs:       RESEARCHER.waitSecs,
-    trial_order:     S.trialOrder.map(p=>+(p.toFixed(2))),
-    responses:       S.responses
+    study_id:          S.studyID || '',
+    session_id:        S.sessionID || '',
+    condition:         S.condition,
+    condition_label:   cond().label,
+    condition_source:  S.conditionSource,
+    platform:          S.platform,
+    comp_errors:       S.compErrors,
+    scout_fee:         RESEARCHER.scoutFee,
+    wait_secs:         RESEARCHER.waitSecs,
+    trial_order:       S.trialOrder.map(p=>+(p.toFixed(2))),
+    survey_reassurance:    S.survey.reassurance,
+    survey_fear_avoidance: S.survey.fear_avoidance,
+    survey_instrumental:   S.survey.instrumental,
+    survey_curiosity:      S.survey.curiosity,
+    survey_pattern:        S.survey.pattern,
+    survey_open:           S.survey.open_response,
+    responses:             S.responses
   };
 }
 
@@ -919,20 +1225,23 @@ function dlCSV() {
   const cols = [
     'pid','prolific_pid','participant_name','participant_email',
     'platform','condition','condition_label','condition_source',
-    'trial','probability','seek_now',
-    'reassurance','fear','action',
+    'trial','probability','seek_now','outcome',
     'rt_decision_ms','rt_wait_ms',
-    'comp_errors','timestamp'
+    'comp_errors','scout_fee',
+    'survey_reassurance','survey_fear_avoidance','survey_instrumental','survey_curiosity','survey_pattern','survey_open',
+    'timestamp'
   ];
   const ts = new Date().toISOString();
   const rows = S.responses.map(r => [
     S.pid, S.prolificPID||'', S.participantName, S.participantEmail,
     S.platform, S.condition, cond().label, S.conditionSource,
-    r.trial, r.probability.toFixed(2), r.seek_now,
-    r.reassurance??'', r.fear??'', r.action??'',
+    r.trial, r.probability.toFixed(2), r.seek_now, r.outcome??'',
     r.rt_decision_ms, r.rt_wait_ms??0,
-    S.compErrors, ts
-  ].map(v=>String(v).includes(',') ? `"${v}"` : v).join(','));
+    S.compErrors, RESEARCHER.scoutFee,
+    S.survey.reassurance??'', S.survey.fear_avoidance??'', S.survey.instrumental??'', S.survey.curiosity??'',
+    S.survey.pattern??'', `"${(S.survey.open_response||'').replace(/"/g,'""')}"`,
+    ts
+  ].map(v=>typeof v === 'string' && v.startsWith('"') ? v : (String(v).includes(',') ? `"${v}"` : v)).join(','));
   dlFile([cols.join(','),...rows].join('\n'), `RS_${S.pid}.csv`, 'text/csv');
 }
 
