@@ -232,7 +232,7 @@ const RESEARCHER = {
   // Payment details (shown to participants in instructions).
   pointValue:       0.50,   // $ per point
   eligiblePct:      10,     // % of participants eligible for real payment
-  maxPayout:        50,     // $ max payout
+  maxPayout:        52.5,   // $ max payout
   paymentDelay:     '1 week'
 };
 
@@ -485,11 +485,6 @@ function renderDemographics() {
       <div class="form-hint">Ask your researcher for your assigned ID if you're unsure.</div>
     </div>
     <div class="form-group">
-      <label class="form-label">Full Name <span class="optional">(optional)</span></label>
-      <input class="form-input" id="f-name" placeholder="Your name"
-        value="${S.participantName}" oninput="S.participantName=this.value">
-    </div>
-    <div class="form-group">
       <label class="form-label">Email Address <span class="optional">(optional — for payment / follow-up)</span></label>
       <input class="form-input" type="email" id="f-email" placeholder="you@example.com"
         value="${S.participantEmail}" oninput="S.participantEmail=this.value">
@@ -529,47 +524,28 @@ function renderInstructions() {
   <span class="step-pill">Instructions</span>
   <h2>How the Study Works</h2>
 
-  <h3>Your Points</h3>
-  <p>You receive two separate allocations of points for this study:</p>
-
-  <div class="coins-row" style="margin-bottom:12px;">
-    <span class="coins-icon">🎯</span>
-    <div>
-      <div class="coins-label">100 Points — Game Reward</div>
-      <div class="coins-sub">What you can win or lose based on the expedition outcome. This is the stake.</div>
-    </div>
-  </div>
-  <div class="coins-row">
-    <span class="coins-icon">📡</span>
-    <div>
-      <div class="coins-label">5 Points — Information Budget</div>
-      <div class="coins-sub">Extra money given to you solely to pay for the messenger if you choose to use it. If you don't send the messenger, you keep these 5 points.</div>
-    </div>
-  </div>
-
-  <p style="margin-top:4px;">Each point is worth <strong>$${RESEARCHER.pointValue.toFixed(2)}</strong>. Your maximum possible earnings are <strong>105 points = $${(CFG.endowment * RESEARCHER.pointValue).toFixed(2)}</strong> (if no mishap and you kept your information budget).</p>
-
   <h3>The Expedition</h3>
-  <p>You have sponsored an expedition to search for rare artifacts. The outcome has already been determined, but you don't know it yet. If a mishap occurred, you lose the 100-point game reward. If no mishap, you keep it.</p>
+  <p>You've sponsored an expedition into remote territory to search for rare artifacts. The team has already set off — and something may have gone wrong along the way. You just don't know yet.</p>
+  <p>Over 5 rounds, you'll face the same choice: <strong>find out now, or wait?</strong></p>
 
-  <h3>Your Decision</h3>
-  <p>You may <strong>send a messenger to find out the result now</strong>. The messenger travels and returns in about <strong>${RESEARCHER.waitSecs} seconds</strong>, then tells you what actually happened so you can respond accordingly.</p>
-
-  <div class="infobox ib-amber" style="margin-bottom:16px;">
-    <strong>💰 Sending the messenger costs your ${RESEARCHER.scoutFee}-point information budget.</strong> This comes from the extra allocation, <em>not</em> from your 100-point game reward. If you choose to wait, you keep the 5 points and learn the outcome in <strong>1 week</strong> when payments are processed.
+  <h3>Your Points</h3>
+  <p>You start each round with <strong>105 points</strong> (each worth <strong>$${RESEARCHER.pointValue.toFixed(2)}</strong> — maximum earnings $${(CFG.endowment * RESEARCHER.pointValue).toFixed(2)}).</p>
+  <div class="infobox ib-blue">
+    <strong>📡 Send the messenger</strong> — costs <strong>${RESEARCHER.scoutFee} points</strong> and takes about <strong>${RESEARCHER.waitSecs} seconds</strong>. The messenger returns and tells you exactly what happened.<br><br>
+    <strong>⏳ Wait</strong> — free. You'll learn the outcome in <strong>1 week</strong> when payments are processed.
   </div>
 
+  <h3>If There Was a Problem</h3>
   <div class="infobox ${boxCls}">
-    <strong>⚠️ If the messenger returns with bad news (mishap occurred):</strong><br><br>
-    ${cd.ifBadNews}
-    ${!isNone?'<br><br><em>If you wait instead of contacting them, it will be too late for this action.</em>':''}
+    <strong>If you sent the messenger:</strong> ${cd.ifBadNews}<br><br>
+    <strong>If you waited:</strong> ${isNone ? 'Same result — there is nothing you can do either way. You lose all 100 points.' : 'It\'s too late to act. You lose all 100 points.'}
   </div>
 
   <div class="infobox ib-gray">
-    <strong>📋 Each round is independent.</strong> The expedition and mishap probability are different in each round. Your choice in one round has no effect on any other round. One round will be randomly selected at the end, and ${RESEARCHER.eligiblePct}% of participants will receive real payment based on that round's outcome — up to $${RESEARCHER.maxPayout}, paid <strong>${RESEARCHER.paymentDelay}</strong> from today.
+    <strong>📋 Each round is independent.</strong> A fresh expedition, a different probability, no connection to other rounds. One round is randomly selected for payment — ${RESEARCHER.eligiblePct}% of participants receive up to <strong>$${RESEARCHER.maxPayout}</strong>, paid <strong>${RESEARCHER.paymentDelay}</strong> from today.
   </div>
 
-  <p>You make this decision across <strong>5 rounds</strong> with different mishap probabilities. After all 5 rounds, you'll answer a brief set of questions about your decisions.</p>
+  <p>After all 5 rounds you'll answer a few short questions about your choices.</p>
 
   <div class="btn-row">
     <button class="btn btn-secondary" onclick="go('demographics')">← Back</button>
