@@ -263,7 +263,7 @@ const CFG = {
       recoverable: 0,
       ifBadNews:  'there is <strong>nothing you can do</strong> — the result is final. You lose all 100 coins.',
       nowDesc:    'Send the messenger and learn the result. If bad news: nothing you can do — you lose all 100 coins. If good news: keep your coins (minus the messenger fee).',
-      waitDesc:   'Find out for free in 1 week when payments are processed. The outcome is identical whether or not you contact them now.',
+      waitDesc:   'Find out for free in <strong>1 week</strong> when payments are processed. The outcome is identical whether or not you contact them now.',
       debrief:    'In your condition, information had <strong>no practical value</strong> — knowing the outcome earlier could not change it. Our theory predicts that reassurance-seeking dominates: information-seeking should be <em>higher at low mishap probabilities</em> (when good news is likely and reassuring) than at high probabilities (when fear of bad news discourages seeking).'
     },
     low: {
@@ -272,7 +272,7 @@ const CFG = {
       recoverable: 20,
       ifBadNews:  'you can make a small corrective adjustment — saving <strong>20 coins</strong> (you lose 80 instead of 100).',
       nowDesc:    'Send the messenger and learn the result. If bad news: small adjustment saves 20 coins (you lose 80). If good news: keep your coins (minus the messenger fee).',
-      waitDesc:   'Find out in 1 week when payments are processed — but too late for the adjustment. You\'d lose all 100 points on bad news.',
+      waitDesc:   'Find out in <strong>1 week</strong> when payments are processed — but too late for the adjustment. You\'d lose all 100 points on bad news.',
       debrief:    'In your condition, information had <strong>limited practical value</strong> (saves only 20 of 100 coins on bad news). Our theory predicts that reassurance-seeking still dominates over instrumental value, especially at low mishap probabilities.'
     },
     high: {
@@ -281,7 +281,7 @@ const CFG = {
       recoverable: 60,
       ifBadNews:  'you <strong>can redirect</strong> the expedition to a backup route — saving <strong>60 coins</strong> (you lose only 40 instead of 100).',
       nowDesc:    'Send the messenger and learn the result. If bad news: redirect saves 60 coins (you lose only 40). If good news: keep your coins (minus the messenger fee).',
-      waitDesc:   'Find out in 1 week when payments are processed — but too late to redirect. You\'d lose all 100 points on bad news.',
+      waitDesc:   'Find out in <strong>1 week</strong> when payments are processed — but too late to redirect. You\'d lose all 100 points on bad news.',
       debrief:    'In your condition, information had <strong>high practical value</strong> (saves 60 of 100 coins on bad news). Our theory predicts that instrumental value increases information-seeking, especially at higher mishap probabilities where bad news is more likely.'
     }
   }
@@ -425,7 +425,7 @@ function renderWelcome() {
 
   <div class="infobox ib-blue">
     <strong>What you'll do:</strong> In each of 5 independent rounds, you have sponsored an expedition. A mishap may have occurred.
-    You decide whether to <em>send a messenger to find out now</em> (costs your 5-point information budget + ~${RESEARCHER.waitSecs}s waiting) or <em>wait</em> (free — you'll find out in 1 week when payments are processed).
+    You decide whether to <em>send a messenger to find out now</em> (costs your 5-point information budget + ~${RESEARCHER.waitSecs}s waiting) or <em>wait</em> (free — you keep your 5-point budget and find out in <strong>1 week</strong> when payments are processed).
     The mishap probability changes each round. Each round is <strong>independent</strong>. After all 5 decisions, you'll answer a few questions about how you felt.
   </div>
 
@@ -481,17 +481,13 @@ function renderDemographics() {
       <label class="form-label">MTurk Worker ID</label>
       <input class="form-input" readonly value="${S.participantID}">
     </div>` : `
-    <p>Please enter your details below. This information is used only for payment and follow-up, and will be stored securely.</p>
+    <p>Please enter your Prolific ID below.</p>
     <div class="form-group">
-      <label class="form-label">Participant / Study ID <span style="color:#ef4444">*</span></label>
-      <input class="form-input" id="f-pid" placeholder="e.g. your Prolific ID, student ID, or assigned code"
+      <label class="form-label">Prolific ID <span style="color:#ef4444">*</span></label>
+      <input class="form-input" id="f-pid" placeholder="e.g. 5e3f2a1b4c9d8e7f6a5b4c3d"
         value="${S.participantID}" oninput="S.participantID=this.value">
-      <div class="form-hint">Ask your researcher for your assigned ID if you're unsure.</div>
+      <div class="form-hint">You can find your Prolific ID in your Prolific account settings.</div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Email Address <span class="optional">(optional — for payment / follow-up)</span></label>
-      <input class="form-input" type="email" id="f-email" placeholder="you@example.com"
-        value="${S.participantEmail}" oninput="S.participantEmail=this.value">
     </div>`}
 
   <div id="demo-err" class="error-msg hidden">Please enter a Participant ID before continuing.</div>
@@ -536,7 +532,7 @@ function renderInstructions() {
   <p>You start each round with <strong>105 points</strong> (each worth <strong>$${RESEARCHER.pointValue.toFixed(2)}</strong> — maximum earnings $${(CFG.endowment * RESEARCHER.pointValue).toFixed(2)}).</p>
   <div class="infobox ib-blue">
     <strong>📡 Send the messenger</strong> — costs <strong>${RESEARCHER.scoutFee} points</strong> and takes about <strong>${RESEARCHER.waitSecs} seconds</strong>. The messenger returns and tells you exactly what happened.<br><br>
-    <strong>⏳ Wait</strong> — free. You'll learn the outcome in <strong>1 week</strong> when payments are processed.
+    <strong>⏳ Wait</strong> — free. You'll learn the outcome in <strong>1 week</strong> when payments are processed. If you wait, you <strong>keep your ${RESEARCHER.scoutFee}-point information budget</strong>.
   </div>
 
   <h3>If There Was a Problem</h3>
@@ -664,7 +660,7 @@ function renderPractice() {
   </button>
   <button class="choice-btn" id="p-wait" onclick="practiceChoose('wait')">
     <div class="c-title">⏳ Wait until they return — find out later, for free</div>
-    <div class="c-desc">${cd.waitDesc}</div>
+    <div class="c-desc">${cd.waitDesc} You keep your ${RESEARCHER.scoutFee}-point information budget.</div>
   </button>
   <div id="practice-next" class="hidden mt-24"></div>
 </div>`;
@@ -751,7 +747,7 @@ function renderTrial() {
   </button>
   <button class="choice-btn" id="t-wait" onclick="trialChoose('wait')">
     <div class="c-title">⏳ Wait until they return — find out later, for free</div>
-    <div class="c-desc">${cd.waitDesc}</div>
+    <div class="c-desc">${cd.waitDesc} You keep your ${RESEARCHER.scoutFee}-point information budget.</div>
   </button>
   <div id="trial-err" class="error-msg hidden">Please make a selection before confirming.</div>
   <div class="btn-row"><button class="btn btn-primary" onclick="submitTrial()">Confirm Choice →</button></div>
@@ -1068,50 +1064,18 @@ function renderEnd() {
   <div class="text-center" style="padding-bottom:8px;">
     <div style="font-size:60px;margin-bottom:16px;">🏆</div>
     <h1 style="margin-bottom:10px;">Study Complete!</h1>
-    <p style="font-size:17px;color:#374151;">You sent the messenger in <strong>${seekCount} of ${total}</strong> rounds.</p>
+    <p style="font-size:17px;color:#374151;">Thank you for participating. You sent the messenger in <strong>${seekCount} of ${total}</strong> rounds.</p>
   </div>
 
   <hr class="divider">
-  <h3>Data Backup Status</h3>
-  <div id="save-status-area">
-    <div class="save-status">
-      <span class="save-dot saving" id="save-dot"></span>
-      <span id="save-msg">${RESEARCHER.firebaseConfig?'Saving to Firebase…':RESEARCHER.sheetsWebAppURL?'Saving to Google Sheets…':'Auto-save not configured — please download your data below.'}</span>
-    </div>
+  <h3>Your Payment Code</h3>
+  <p style="margin-bottom:16px;">Please copy the code below and paste it into Prolific to confirm your submission and receive payment:</p>
+  ${RESEARCHER.prolificCompletionCode ? `
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+    <div style="font-size:32px;font-weight:900;letter-spacing:5px;color:#2563eb;background:#eff6ff;border:2px solid #bfdbfe;padding:16px 32px;border-radius:12px;">${RESEARCHER.prolificCompletionCode}</div>
+    <button class="btn btn-secondary" onclick="navigator.clipboard.writeText('${RESEARCHER.prolificCompletionCode}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Code',1500)})">Copy Code</button>
   </div>
-
-  <hr class="divider">
-  <h3>Your Choices Across Risk Levels</h3>
-  <table class="summary-table">
-    <thead><tr>
-      <th>Mishap Risk</th>
-      <th>Your Choice</th>
-      <th style="text-align:center">Outcome</th>
-      <th style="text-align:center">Reassurance</th>
-      <th style="text-align:center">Fear</th>
-      <th style="text-align:center">Action</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-
-  ${prolificCode}
-
-  <hr class="divider">
-  <h3>About This Study</h3>
-  <div class="infobox ib-blue">${cd.debrief}</div>
-
-  <hr class="divider">
-  <h3>Download Your Data</h3>
-  <p class="text-sm" style="margin-bottom:14px;">
-    Participant ID: <strong>${S.pid}</strong> &nbsp;·&nbsp;
-    Condition: <span class="cond-badge ${cd.cls}">${cd.label}</span> &nbsp;·&nbsp;
-    Comprehension errors: <strong>${S.compErrors}</strong>
-  </p>
-  <div class="btn-row">
-    ${prolificBtn}
-    <button class="btn btn-primary"   onclick="dlCSV()">⬇ Download CSV</button>
-    <button class="btn btn-secondary" onclick="dlJSON()">⬇ Download JSON</button>
-  </div>
+  ${prolificBtn}` : `<div class="infobox ib-amber">⚠️ No completion code has been set. Please contact the researcher.</div>`}
 </div>`;
 }
 
