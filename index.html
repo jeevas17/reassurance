@@ -222,6 +222,10 @@ const RESEARCHER = {
   // Leave blank if not using Prolific.
   prolificCompletionURL: '',
 
+  // Prolific completion code shown to participants at the end.
+  // Paste your code here, e.g. 'C1ABCDE2'
+  prolificCompletionCode: '',
+
   // Wait time (seconds) when participant chooses "Contact now."
   // Set to 0 for researcher testing (skips countdown, still reveals result).
   waitSecs: 15,
@@ -1050,6 +1054,15 @@ function renderEnd() {
   const prolificBtn = RESEARCHER.prolificCompletionURL
     ? `<a class="btn btn-primary" href="${RESEARCHER.prolificCompletionURL}" target="_blank">✅ Complete on Prolific →</a>` : '';
 
+  const prolificCode = RESEARCHER.prolificCompletionCode
+    ? `<hr class="divider">
+  <h3>Prolific Completion Code</h3>
+  <p style="margin-bottom:12px;">Please copy this code and paste it into Prolific to confirm your submission and receive payment:</p>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div style="font-size:28px;font-weight:900;letter-spacing:4px;color:#2563eb;background:#eff6ff;border:2px solid #bfdbfe;padding:14px 28px;border-radius:12px;">${RESEARCHER.prolificCompletionCode}</div>
+    <button class="btn btn-secondary" onclick="navigator.clipboard.writeText('${RESEARCHER.prolificCompletionCode}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Code',1500)})">Copy Code</button>
+  </div>` : '';
+
   return `
 <div class="card">
   <div class="text-center" style="padding-bottom:8px;">
@@ -1080,6 +1093,8 @@ function renderEnd() {
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>
+
+  ${prolificCode}
 
   <hr class="divider">
   <h3>About This Study</h3>
