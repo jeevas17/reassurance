@@ -638,7 +638,7 @@ function showErr(id, msg) {
 //  SCREEN: PRACTICE
 // ═══════════════════════════════════════════════════════════════
 function renderPractice() {
-  const p=0.50, cd=cond(), color=riskColor(p);
+  const p=0.40, cd=cond(), color=riskColor(p);
   const isNone=S.condition==='none', isHigh=S.condition==='high';
   return `
 <div class="card">
@@ -658,7 +658,7 @@ function renderPractice() {
     </div>
     <div class="risk-bar"><div class="risk-fill" style="width:${p*100}%;background:${color}"></div></div>
     <div class="risk-legend">
-      <span><span class="risk-dot" style="background:${color}"></span>50% chance mishap occurred</span>
+      <span><span class="risk-dot" style="background:${color}"></span>40% chance mishap occurred</span>
       <span>Mishap → lose 100 &nbsp;|&nbsp; No mishap → keep 100</span>
     </div>
   </div>
