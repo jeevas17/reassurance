@@ -255,7 +255,7 @@ const CFG = {
   studyName:    'Reassurance-Seeking Experiment — Study 3',
   endowment:    105,   // total points given to participant
   coins:        100,   // points at stake on the expedition bet
-  probabilities: [0.10, 0.25, 0.50, 0.75, 0.90],
+  probabilities: [0.01, 0.05, 0.10, 0.20, 0.30],
   conditions: {
     none: {
       label:      'No Instrumentality',
@@ -452,7 +452,10 @@ function renderWelcome() {
   <h3>🔬 Researcher Debug Info</h3>
   <div style="display:grid;gap:8px;font-size:13.5px;background:#f9fafb;padding:16px;border-radius:12px;border:1px solid #e5e7eb;">
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Participant ID</span> <strong>${S.pid}</strong></div>
-    <div><span style="color:#9ca3af;width:140px;display:inline-block;">Platform</span> <strong>${S.platform}</strong>${S.crID ? ' (CloudResearch ID: '+S.crID+')' : ''}</div>
+    <div><span style="color:#9ca3af;width:140px;display:inline-block;">Platform</span> <strong>${S.platform}</strong></div>
+    <div><span style="color:#9ca3af;width:140px;display:inline-block;">Connect ID</span> <strong>${S.crID || '⚠️ not passed'}</strong></div>
+    <div><span style="color:#9ca3af;width:140px;display:inline-block;">assignmentId</span> <strong>${S.assignmentID || '— (optional)'}</strong></div>
+    <div><span style="color:#9ca3af;width:140px;display:inline-block;">projectId</span> <strong>${S.projectID || '— (optional)'}</strong></div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Condition</span> <span class="cond-badge ${cd.cls}">${cd.label}</span></div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Assignment</span> <strong>${sourceNote}</strong></div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Trial order</span> <strong>${S.trialOrder.map(p=>(p*100).toFixed(0)+'%').join(' → ')}</strong></div>
@@ -478,10 +481,10 @@ function renderDemographics() {
 
   ${isCloudResearch ? `
     <div class="infobox ib-green">
-      ✅ <strong>CloudResearch detected.</strong> Your CloudResearch ID has been recorded automatically. No further action needed on this screen.
+      ✅ <strong>Connect detected.</strong> Your Connect ID has been recorded automatically. No further action needed on this screen.
     </div>
     <div class="form-group">
-      <label class="form-label">CloudResearch ID</label>
+      <label class="form-label">Connect ID</label>
       <input class="form-input" readonly value="${S.crID}">
     </div>` : isMTurk ? `
     <div class="infobox ib-blue">
@@ -491,12 +494,12 @@ function renderDemographics() {
       <label class="form-label">MTurk Worker ID</label>
       <input class="form-input" readonly value="${S.participantID}">
     </div>` : `
-    <p>Please enter your CloudResearch ID below.</p>
+    <p>Please enter your Connect ID below.</p>
     <div class="form-group">
-      <label class="form-label">CloudResearch ID <span style="color:#ef4444">*</span></label>
+      <label class="form-label">Connect ID <span style="color:#ef4444">*</span></label>
       <input class="form-input" id="f-pid" placeholder="e.g. 5e3f2a1b4c9d8e7f6a5b4c3d"
         value="${S.participantID}" oninput="S.participantID=this.value">
-      <div class="form-hint">You can find your CloudResearch ID in your CloudResearch account.</div>
+      <div class="form-hint">You can find your Connect ID in your CloudResearch Connect account.</div>
     </div>
     </div>`}
 
