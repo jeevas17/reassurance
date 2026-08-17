@@ -261,9 +261,9 @@ const CFG = {
       label:      'No Instrumentality',
       cls:        'cond-none',
       recoverable: 0,
-      ifBadNews:  'there is <strong>nothing you can do</strong> — the result is final. You lose all 100 coins.',
-      nowDesc:    'Send the messenger and learn the result. If bad news: nothing you can do — you lose all 100 coins. If good news: keep your coins (minus the messenger fee).',
-      waitDesc:   'Find out for free in <strong>1 week</strong> when payments are processed. The outcome is identical whether or not you contact them now.',
+      ifBadNews:  'you <strong>can\'t change the result</strong> — you lose all 100 coins. Finding out now just means you know now rather than later.',
+      nowDesc:    'Send the messenger and learn the result now. You can\'t change the outcome — but you find out now instead of living with the uncertainty.',
+      waitDesc:   'Find out for free in <strong>1 week</strong> when payments are processed — living with the uncertainty until then.',
       debrief:    'In your condition, information had <strong>no practical value</strong> — knowing the outcome earlier could not change it. Our theory predicts that reassurance-seeking dominates: information-seeking should be <em>higher at low mishap probabilities</em> (when good news is likely and reassuring) than at high probabilities (when fear of bad news discourages seeking).'
     },
     low: {
@@ -339,6 +339,7 @@ const S = {
     instrumental:   null,  // 1–7: "I mainly contacted to take corrective action"
     curiosity:      null,  // 1–7: "I contacted simply because I was curious"
     pattern:        null,  // categorical: more_low | more_high | no_pattern | always | never
+    motive_lowrisk: null,  // categorical main reason in the low-probability rounds
     open_response:  ''     // free text
   }
 };
@@ -551,7 +552,7 @@ function renderInstructions() {
   <h3>If There Was a Problem</h3>
   <div class="infobox ${boxCls}">
     <strong>If you sent the messenger:</strong> ${cd.ifBadNews}<br><br>
-    <strong>If you waited:</strong> ${isNone ? 'Same result — there is nothing you can do either way. You lose all 100 points.' : 'It\'s too late to act. You lose all 100 points.'}
+    <strong>If you waited:</strong> ${isNone ? 'The loss is the same either way — but you live with the uncertainty until the end.' : 'It\'s too late to act. You lose all 100 points.'}
   </div>
 
   <div class="infobox ib-gray">
@@ -693,7 +694,7 @@ function practiceChoose(v) {
     if (!mishap) {
       resultHTML = `<div class="infobox ib-green">✅ <strong>Good news!</strong> No mishap — the expedition is safe. You keep your coins (minus the ${RESEARCHER.scoutFee}-coin messenger fee).</div>`;
     } else if (S.condition === 'none') {
-      resultHTML = `<div class="infobox ib-red">⚠️ <strong>Bad news.</strong> A mishap occurred. There is nothing you can do — you lose all 100 coins.</div>`;
+      resultHTML = `<div class="infobox ib-red">⚠️ <strong>Bad news.</strong> A mishap occurred. You couldn't change the result — you lose all 100 coins.</div>`;
     } else if (S.condition === 'low') {
       resultHTML = `<div class="infobox ib-amber">⚠️ <strong>Bad news.</strong> A mishap occurred. Small adjustment saves 20 coins — you lose 80.</div>`;
     } else {
@@ -891,7 +892,7 @@ function renderResult() {
     boxCls = 'ib-green';
   } else if (S.condition === 'none') {
     headline = '⚠️ Bad news — a mishap occurred.';
-    body = `There is nothing you can do — the result is final. You lose the 100-point bet.
+    body = `You couldn't change the result — but you found out now instead of living with the uncertainty. You lose the 100-point bet.
       <br><br><em>If this round is selected: <strong>${fee > 0 ? 0 : 0} points</strong> (you lose the 100-pt bet; messenger fee already spent = 0 pts = $0.00).</em>`;
     boxCls = 'ib-red';
   } else if (S.condition === 'low') {
@@ -971,6 +972,14 @@ function renderLikertEnd() {
     ['never',     '⏳ I never sent the messenger']
   ];
 
+  const motiveOpts = [
+    ['instrumental_act', 'To learn something I could act on'],
+    ['reassure',         'To feel reassured — to stop the discomfort of not knowing and hope for good news'],
+    ['brace_badnews',    'To brace myself for bad news'],
+    ['curious',          'Just curious']
+  ];
+  const lowRiskMotiveOpts = motiveOpts.concat([['didnt_send', 'I didn\'t send the messenger in those rounds']]);
+
   return `
 <div class="card">
   <span class="step-pill">Reflection</span>
@@ -988,6 +997,16 @@ function renderLikertEnd() {
     <span>${label}</span>
   </label>`).join('')}
 
+  <div style="margin-top:26px;">
+    <h3>In the Low-Risk Rounds</h3>
+    <p style="font-size:15px;color:#374151;margin-bottom:14px;">In the rounds where a mishap was <strong>less likely</strong>, if you sent the messenger, what were you mainly after?</p>
+    ${lowRiskMotiveOpts.map(([val,label])=>`
+    <label class="radio-option" id="lrm-${val}">
+      <input type="radio" name="motive_lowrisk" value="${val}" onchange="S.survey.motive_lowrisk='${val}'">
+      <span>${label}</span>
+    </label>`).join('')}
+  </div>
+
   <div style="margin-top:20px;">
     <div class="likert-q" style="margin-bottom:10px;">In your own words — why did you make the choices you did? What was going through your mind?</div>
     <textarea id="open-response" rows="4" placeholder="Describe your reasoning here…"
@@ -1002,7 +1021,7 @@ function renderLikertEnd() {
   <h3>What Drove Your Decisions?</h3>
   <p style="font-size:14px;color:#6b7280;margin-bottom:22px;">Rate how much each statement describes your overall motivation across the rounds. Use 1 (Strongly Disagree) to 7 (Strongly Agree).</p>
 
-  ${lk('reassurance', '1. &ldquo;I sent the messenger mainly to get <strong>reassuring news</strong> — hoping to hear that everything was fine.&rdquo;')}
+  ${lk('reassurance', '1. &ldquo;At <strong>low mishap probabilities</strong>, I sent the messenger mainly to get <strong>reassuring news</strong> — hoping to hear that everything was fine.&rdquo;')}
   ${lk('fear_avoid',  '2. &ldquo;At <strong>higher mishap probabilities</strong>, I was less willing to contact the expedition because I <strong>feared receiving bad news</strong>.&rdquo;')}
   ${lk('instrumental','3. &ldquo;I sent the messenger mainly because I wanted to be able to <strong>take corrective action</strong> if something had gone wrong.&rdquo;')}
   ${lk('curiosity',   '4. &ldquo;I sent the messenger simply because I was <strong>curious</strong> about what had happened — I just wanted to know.&rdquo;')}
@@ -1020,9 +1039,10 @@ function submitLikertEnd() {
   const a   = document.querySelector('input[name="instrumental"]:checked');
   const cur = document.querySelector('input[name="curiosity"]:checked');
   const pat = S.survey.pattern;
+  const lrm = S.survey.motive_lowrisk;
 
-  if (!r || !f || !a || !cur || !pat) {
-    showErr('likert-err', 'Please answer all four rating questions and select a choice pattern before continuing.');
+  if (!r || !f || !a || !cur || !pat || !lrm) {
+    showErr('likert-err', 'Please answer every question above before continuing.');
     return;
   }
 
@@ -1171,6 +1191,7 @@ function buildPayload() {
     survey_instrumental:   S.survey.instrumental,
     survey_curiosity:      S.survey.curiosity,
     survey_pattern:        S.survey.pattern,
+    survey_motive_lowrisk: S.survey.motive_lowrisk,
     survey_open:           S.survey.open_response,
     responses:             S.responses
   };
@@ -1186,7 +1207,7 @@ function dlCSV() {
     'trial','probability','seek_now','outcome',
     'rt_decision_ms','rt_wait_ms',
     'comp_errors','scout_fee',
-    'survey_reassurance','survey_fear_avoidance','survey_instrumental','survey_curiosity','survey_pattern','survey_open',
+    'survey_reassurance','survey_fear_avoidance','survey_instrumental','survey_curiosity','survey_pattern','survey_motive_lowrisk','survey_open',
     'timestamp'
   ];
   const ts = new Date().toISOString();
@@ -1197,7 +1218,7 @@ function dlCSV() {
     r.rt_decision_ms, r.rt_wait_ms??0,
     S.compErrors, RESEARCHER.scoutFee,
     S.survey.reassurance??'', S.survey.fear_avoidance??'', S.survey.instrumental??'', S.survey.curiosity??'',
-    S.survey.pattern??'', `"${(S.survey.open_response||'').replace(/"/g,'""')}"`,
+    S.survey.pattern??'', S.survey.motive_lowrisk??'', `"${(S.survey.open_response||'').replace(/"/g,'""')}"`,
     ts
   ].map(v=>typeof v === 'string' && v.startsWith('"') ? v : (String(v).includes(',') ? `"${v}"` : v)).join(','));
   dlFile([cols.join(','),...rows].join('\n'), `RS_${S.pid}.csv`, 'text/csv');
