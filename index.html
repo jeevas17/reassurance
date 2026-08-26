@@ -210,9 +210,17 @@ const RESEARCHER = {
   //   3. Rules tab \u{2192} paste the rules from FIREBASE_SETUP.md \u{2192} Publish
   //   4. Fill in the values below (apiKey etc.)
   // Leave as null to disable Firebase and fall back to Sheets only.
-  // \u{26A0}\u{FE0F} STUDY 4 TODO: create a NEW Firebase project (do NOT reuse Study 3's store)
-  // and paste its config here. Left null so nothing writes to the Study 3 database.
-  firebaseConfig: null,
+  // NOTE: Using the shared 'reassurance-study' Firebase project (same store as the
+  // previous studies). Study 4 responses are written to the same 'responses' collection,
+  // keyed by participant id, so they sit alongside earlier data without overwriting it.
+  firebaseConfig: {
+    apiKey:            "AIzaSyCIM6_tme19BJNNhjc7G1GRssj_gTvNhiA",
+    authDomain:        "reassurance-study.firebaseapp.com",
+    projectId:         "reassurance-study",
+    storageBucket:     "reassurance-study.firebasestorage.app",
+    messagingSenderId: "762220390900",
+    appId:             "1:762220390900:web:890065a172a6a24dd5f1a1"
+  },
 
   // CloudResearch Connect completion code shown on the final screen.
   // Per CloudResearch: display the CODE (participants return to Connect and enter it),
@@ -735,7 +743,7 @@ function renderRiskSpin(){
       <div id="rnum" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:900;color:#111827;">\u{2013}</div>
     </div>
     <div id="rrisk-done" class="hidden" style="margin-top:6px;">
-      <div class="infobox ib-amber" style="text-align:left;"><strong>A <span id="rrisk-txt"></span>% chance of losing 100.</strong> Next, the outcome wheel is spun \u{2014} you lose if it lands <strong>at or below <span id="rrisk-cut"></span></strong>, and keep the 100 points otherwise.</div>
+      <div class="infobox ib-amber" style="text-align:left;"><strong>A <span id="rrisk-txt"></span>% chance of losing 100.</strong> Next, the outcome wheel is spun \u{2014} it lands on a number from <strong>1 to 100</strong>; you lose if it is <strong>at or below <span id="rrisk-cut"></span></strong>, and keep the 100 points otherwise.</div>
       <div class="btn-row"><button class="btn btn-primary" onclick="go('lockspin')">Continue \u{2192}</button></div>
     </div>
   </div>
