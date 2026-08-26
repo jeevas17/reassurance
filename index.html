@@ -775,7 +775,7 @@ function renderLockSpin(){
     <div id="lspin-status" class="sub" style="margin:6px 0;">Spinning your outcome\u{2026}</div>
   </div>
   <div id="decide-block" class="hidden">
-    <div class="infobox ib-gray" style="text-align:left;">\u{1F512} <strong>Your result is locked in</strong> \u{2014} decided, but hidden. This round carried a <strong>${pct(p)} chance of a loss</strong>.</div>
+    <div class="infobox ib-gray" style="text-align:left;">\u{1F512} <strong>Your result is locked in</strong> \u{2014} decided, but hidden. This round carried a <strong>${pct(p)} chance of a loss</strong> (that is, if the number you got on the wheel is <strong>${S.roundRisk} or below</strong>, you lose the 100 points).</div>
     <div class="infobox ${isNone?'ib-amber':isHigh?'ib-green':'ib-red'}" style="text-align:left;"><strong>If it's a loss:</strong> ${cd.ifBadNews}</div>
     <div class="infobox ib-purple" style="text-align:left;">The outcome is already set \u{2014} this only changes <strong>when you find out</strong>. <strong>Open now</strong> and you know today: <strong>relief</strong> if it's good news, or knowing you've lost and <strong>carrying that</strong> until the results are released. <strong>Wait</strong> and it stays <strong>unresolved</strong> \u{2014} you sit with not knowing for a week.</div>
     <h3 style="text-align:center;margin-top:10px;">Do you want to know the result?</h3>
