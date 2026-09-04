@@ -198,9 +198,11 @@ const RESEARCHER = {
   // 1. Create a Google Apps Script web app (see google_apps_script.js for code).
   // 2. Deploy it and paste the web app URL here.
   // Leave blank ('') to disable \u{2014} participants must download CSV manually.
-  // \u{26A0}\u{FE0F} STUDY 4 TODO: deploy a NEW Apps Script + Sheet (with the new columns:
-  // insight_score, iu_total, anx_total, iu1..iu12, anx1..anx6) and paste its URL here.
-  sheetsWebAppURL: '',
+  // Google Sheets backup (secondary to Firebase). Reuses the pilot's Web App URL.
+  // NOTE: to capture the new columns (iu1..iu12, survey_comments, distress, etc.) in
+  // the Sheet, redeploy the patched google_apps_script.js (writes to a 'study4' tab).
+  // Firebase (below) is primary and already stores the full payload regardless.
+  sheetsWebAppURL: 'https://script.google.com/macros/s/AKfycbxQgPXeHqkUAs6hD74neYrIQKGfo3gpfEoGrEBqUqnmJtCn5tYxUYH8QfeSW6kfLbeg2Q/exec',
 
   // -- Firebase config ------------------------------------------
   // PRIMARY data store \u{2014} handles high concurrency.
@@ -210,9 +212,9 @@ const RESEARCHER = {
   //   3. Rules tab \u{2192} paste the rules from FIREBASE_SETUP.md \u{2192} Publish
   //   4. Fill in the values below (apiKey etc.)
   // Leave as null to disable Firebase and fall back to Sheets only.
-  // NOTE: Using the shared 'reassurance-study' Firebase project (same store as the
-  // previous studies). Study 4 responses are written to the same 'responses' collection,
-  // keyed by participant id, so they sit alongside earlier data without overwriting it.
+  // Reusing the pilot's Firebase project ('reassurance-study'). Study 4 data lands in
+  // the same 'responses' collection as Study 3 / the pilot -- separate it later by
+  // timestamp / the new columns (distress, iu1..iu12). Firestore rules already allow writes.
   firebaseConfig: {
     apiKey:            "AIzaSyCIM6_tme19BJNNhjc7G1GRssj_gTvNhiA",
     authDomain:        "reassurance-study.firebaseapp.com",
@@ -226,7 +228,7 @@ const RESEARCHER = {
   // Per CloudResearch: display the CODE (participants return to Connect and enter it),
   // do NOT auto-redirect via a completion link \u{2014} a redirect prevents Connect from
   // recognizing who completed the survey.
-  cloudResearchCompletionCode: 'B7EA184BF6',  // CloudResearch Connect completion code for Study 4
+  cloudResearchCompletionCode: 'B7EA184BF6',  // \u{26A0}\u{FE0F} pilot/Study-3 code -- REPLACE with Study 4's own CloudResearch Connect completion code before launch
 
   // Redirect URL is intentionally left blank (do not auto-redirect to Connect).
   cloudResearchCompletionURL: '',
@@ -235,8 +237,11 @@ const RESEARCHER = {
   // Set to 0 for researcher testing (skips countdown, still reveals result).
   waitSecs: 15,
 
-  // Messenger fee in points.
-  scoutFee: 5,
+  // Fee to open a result now, in points. Kept deliberately small so a rational
+  // "why pay for pointless info" calculation does not dominate the emotional
+  // (reassurance/avoidance) motive -- the pilot's No-Instrumentality free-text
+  // showed the 5-pt fee was the main reason people never opened. Tunable.
+  scoutFee: 2,
 
   // Payment details (shown to participants in instructions).
   pointValue:       0.25,   // $ per point
@@ -358,6 +363,7 @@ const S = {
   roundSpin: null,     // this round's OUTCOME spin (1\u{2013}100); \u{2264} T = loss
   roundLoss: null,     // whether this round is a loss (outcome spin \u{2264} T)
   decideStart: null,   // timestamp when the pay/wait choice becomes available
+  roundDistress: null, // per-trial: "how much does not knowing bother you right now?" (1-7)
   perceivedScore: null // participant's expectation: how many of the rounds they think are good
 };
 
@@ -555,6 +561,7 @@ function submitDemographics() {
 // outcome now (information-seeking), or waits to find out in a week.
 function sealRound(){
   const p = roundProb();
+  S.roundDistress = null;                             // reset per-trial feeling item
   S.roundRisk = Math.round(100 * p);                 // RISK wheel value = the loss % (1\u{2013}100), preset
   S.roundSpin = 1 + Math.floor(Math.random()*100);   // OUTCOME wheel value (1\u{2013}100), genuine spin
   S.roundLoss = S.roundSpin <= S.roundRisk;          // lose if the outcome lands at/below the risk number
@@ -783,9 +790,23 @@ function renderLockSpin(){
     <div id="lspin-status" class="sub" style="margin:6px 0;">Spinning your outcome\u{2026}</div>
   </div>
   <div id="decide-block" class="hidden">
-    <div class="infobox ib-gray" style="text-align:left;">\u{1F512} <strong>Your result is locked in</strong> \u{2014} decided, but hidden. This round carried a <strong>${pct(p)} chance of a loss</strong> (that is, if the number you got on the wheel is <strong>${S.roundRisk} or below</strong> you lose the 100 points; if it is <strong>above ${S.roundRisk}</strong> you keep them).</div>
-    <div class="infobox ${isNone?'ib-amber':isHigh?'ib-green':'ib-red'}" style="text-align:left;"><strong>If it's a loss:</strong> ${cd.ifBadNews}</div>
-    <div class="infobox ib-purple" style="text-align:left;">The outcome is already set \u{2014} this only changes <strong>when you find out</strong>. <strong>Open now</strong> and you know today: <strong>relief</strong> if it's good news, or knowing you've lost and <strong>carrying that</strong> until the results are released. <strong>Wait</strong> and it stays <strong>unresolved</strong> \u{2014} you sit with not knowing for a week.</div>
+    <div class="infobox ib-gray" style="text-align:left;">\u{1F512} <strong>Your result is locked in</strong> \u{2014} decided, but hidden. You lose the 100 points if the number you got is <strong>${S.roundRisk} or below</strong>; you keep them if it is <strong>above ${S.roundRisk}</strong>.</div>
+    <div class="infobox ${isNone?'ib-amber':isHigh?'ib-green':'ib-red'}" style="text-align:left;">
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:6px;">
+        <span style="background:#dcfce7;color:#166534;font-weight:800;padding:6px 14px;border-radius:99px;">\u{1F642} ${100-S.roundRisk}% chance it's good news</span>
+        <span style="background:#fee2e2;color:#991b1b;font-weight:800;padding:6px 14px;border-radius:99px;">\u{1F61F} ${S.roundRisk}% chance it's a loss</span>
+      </div>
+      <div style="text-align:center;font-size:13px;"><strong>If it's a loss:</strong> ${cd.ifBadNews}</div>
+    </div>
+    <div class="infobox ib-purple" style="text-align:left;">Nothing you choose changes the result \u{2014} only <strong>when you find out</strong>. Sitting behind that lock is a result that is <strong>${100-S.roundRisk}% likely to be good news</strong>. <strong>Open now</strong> and you feel it today: the <strong>relief</strong> of good news, or the weight of a loss you'll <strong>carry for the week</strong>. <strong>Wait</strong> and you hold the <strong>not-knowing</strong> for a whole week before it's resolved.</div>
+
+    <div class="likert-group" style="margin:14px 0 4px;">
+      <div class="likert-q" style="text-align:center;">Right now, how much does <strong>not knowing this result</strong> bother you?</div>
+      <div class="likert-scale" id="distress-scale">${[1,2,3,4,5,6,7].map(x=>`<input type="radio" name="distress" id="distress_${x}" value="${x}" onchange="S.roundDistress=${x};document.getElementById('distress-err').classList.add('hidden')"><label for="distress_${x}">${x}</label>`).join('')}</div>
+      <div class="likert-ends"><span>Not at all</span><span>A great deal</span></div>
+    </div>
+    <div id="distress-err" class="error-msg hidden" style="text-align:center;">Please answer the question above first.</div>
+
     <h3 style="text-align:center;margin-top:10px;">Do you want to know the result?</h3>
     <button class="choice-btn" onclick="decide('now')">
       <div class="c-title">\u{1F50E} Yes \u{2014} pay ${RESEARCHER.scoutFee} to see it now</div>
@@ -812,6 +833,10 @@ function spinLockWheel(){
 }
 // Merged decision (shown right under the locked wheel): know now vs see later.
 function decide(choice){
+  // Require the per-trial feeling item before a real choice (not in practice).
+  if (!S.isPractice && S.roundDistress == null) {
+    const e=document.getElementById('distress-err'); if(e) e.classList.remove('hidden'); return;
+  }
   S.currentChoice = choice;
   // Practice round: don't record data; route back into the real trials.
   if (!S.isPractice) {
@@ -819,6 +844,7 @@ function decide(choice){
       trial: S.currentTrial+1, probability: S.trialOrder[S.currentTrial], seek_now: choice==='now'?1:0,
       rt_decision_ms: Date.now() - (S.decideStart || Date.now()), rt_wait_ms: 0,
       outcome: S.roundLoss ? 'mishap' : 'none', risk: S.roundRisk, spin: S.roundSpin,
+      distress: S.roundDistress,
       reassurance:null, fear:null, action:null
     });
   }
@@ -1214,7 +1240,7 @@ function dlCSV() {
   const cols = [
     'pid','cloudresearch_id','participant_id','assignment_id','project_id','participant_name','participant_email',
     'platform','condition','condition_label','condition_source',
-    'trial','probability','seek_now','outcome','risk_number','outcome_spin',
+    'trial','probability','seek_now','outcome','risk_number','outcome_spin','distress',
     'rt_decision_ms','rt_wait_ms',
     'comp_errors','scout_fee',
     'survey_reassurance','survey_fear_avoidance','survey_instrumental','survey_curiosity','survey_pattern','survey_motive_lowrisk','survey_open',
@@ -1227,7 +1253,7 @@ function dlCSV() {
   const rows = S.responses.map(r => [
     S.pid, S.crID||'', S.crID||'', S.assignmentID||'', S.projectID||'', S.participantName, S.participantEmail,
     S.platform, S.condition, cond().label, S.conditionSource,
-    r.trial, r.probability.toFixed(2), r.seek_now, r.outcome??'', r.risk??'', r.spin??'',
+    r.trial, r.probability.toFixed(2), r.seek_now, r.outcome??'', r.risk??'', r.spin??'', r.distress??'',
     r.rt_decision_ms, r.rt_wait_ms??0,
     S.compErrors, RESEARCHER.scoutFee,
     S.survey.reassurance??'', S.survey.fear_avoidance??'', S.survey.instrumental??'', S.survey.curiosity??'',
