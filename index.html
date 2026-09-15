@@ -243,7 +243,7 @@ const RESEARCHER = {
   // Payment details (shown to participants in instructions).
   pointValue:       0.25,   // $ per point
   eligiblePct:      10,     // % of participants eligible for real payment
-  maxPayout:        26.25,  // $ max payout
+  maxPayout:        25.25,  // $ max payout (= CFG.endowment x pointValue; shown dynamically below)
   paymentDelay:     '1 week'
 };
 
@@ -260,7 +260,7 @@ const RESEARCHER = {
 
 const CFG = {
   studyName:    'Reassurance-Seeking Experiment \u{2014} Study 5',
-  endowment:    105,   // total points given to participant
+  endowment:    101,   // total points given to participant (100 stake + open fee buffer)
   coins:        100,   // points at stake on each section's bonus
   // Study 5 loss-probability levels: pushed to the EXTREMES (2% \u{2026} 90%) so the
   // "almost-certainly-good-news" and "almost-certainly-bad-news" tails \u{2014} where
@@ -474,7 +474,7 @@ function renderWelcome() {
 
   <div class="infobox ib-green">
     <strong>\u{1F4B0} Payment:</strong> Each point is worth <strong>$${RESEARCHER.pointValue.toFixed(2)}</strong>.
-    <strong>${RESEARCHER.eligiblePct}% of participants</strong> will be randomly selected to receive real payment (up to $${RESEARCHER.maxPayout}) based on one randomly chosen section.
+    <strong>${RESEARCHER.eligiblePct}% of participants</strong> will be randomly selected to receive real payment (up to $${(CFG.endowment * RESEARCHER.pointValue).toFixed(2)}) based on one randomly chosen section.
     Payments will be made <strong>${RESEARCHER.paymentDelay} from today</strong>. Please treat each decision as if it counts.
   </div>
 
@@ -622,7 +622,7 @@ function renderInstructions() {
   <p>For each of the ${S.trialOrder.length} sections, you'll face the same choice: <strong>open it now, or keep it sealed for good?</strong></p>
 
   <h3>Your Points</h3>
-  <p>Each section carries <strong>105 points</strong> (each worth <strong>$${RESEARCHER.pointValue.toFixed(2)}</strong> \u{2014} maximum earnings $${(CFG.endowment * RESEARCHER.pointValue).toFixed(2)}).</p>
+  <p>Each section carries <strong>${CFG.endowment} points</strong> (each worth <strong>$${RESEARCHER.pointValue.toFixed(2)}</strong> \u{2014} maximum earnings $${(CFG.endowment * RESEARCHER.pointValue).toFixed(2)}).</p>
   <div class="infobox ib-blue">
     <strong>\u{1F50E} Open the result now</strong> \u{2014} costs <strong>${RESEARCHER.scoutFee} points</strong>. You see this section's sealed result <strong>right away</strong>.<br><br>
     <strong>\u{1F512} Leave it sealed</strong> \u{2014} free. This section's result is <strong>never revealed \u{2014} you never find out</strong>. If you seal it, you <strong>keep the ${RESEARCHER.scoutFee}-point fee</strong>.
@@ -638,7 +638,7 @@ function renderInstructions() {
   </div>
 
   <div class="infobox ib-gray">
-    <strong>\u{1F4CB} Each section is independent.</strong> A fresh sealed result, a different chance of a loss, no connection between sections. One section is randomly selected for payment \u{2014} ${RESEARCHER.eligiblePct}% of participants receive up to <strong>$${RESEARCHER.maxPayout}</strong>, paid <strong>${RESEARCHER.paymentDelay}</strong> from today.
+    <strong>\u{1F4CB} Each section is independent.</strong> A fresh sealed result, a different chance of a loss, no connection between sections. One section is randomly selected for payment \u{2014} ${RESEARCHER.eligiblePct}% of participants receive up to <strong>$${(CFG.endowment * RESEARCHER.pointValue).toFixed(2)}</strong>, paid <strong>${RESEARCHER.paymentDelay}</strong> from today.
   </div>
 
   <p>After all ${S.trialOrder.length} sections you'll answer a few short questions about how you felt and how you tend to handle uncertainty.</p>
@@ -895,7 +895,7 @@ function renderResult() {
   if (!mishap) {
     headline = '\u{2705} Good outcome \u{2014} not a loss!';
     body = `This sealed result came out in your favour.
-      <br><br><em>If this section is selected: <strong>${CFG.endowment - fee} points</strong> (105 \u{2212} ${fee} open fee = ${CFG.endowment - fee} pts = $${((CFG.endowment - fee) * RESEARCHER.pointValue).toFixed(2)}).</em>`;
+      <br><br><em>If this section is selected: <strong>${CFG.endowment - fee} points</strong> (${CFG.endowment} \u{2212} ${fee} open fee = ${CFG.endowment - fee} pts = $${((CFG.endowment - fee) * RESEARCHER.pointValue).toFixed(2)}).</em>`;
     boxCls = 'ib-green';
   } else if (S.condition === 'none') {
     headline = '\u{26A0}\u{FE0F} A loss.';
@@ -905,12 +905,12 @@ function renderResult() {
   } else if (S.condition === 'low') {
     headline = '\u{26A0}\u{FE0F} A loss.';
     body = `You trigger the recovery option, getting back 20 points. You lose 80 instead of 100.
-      <br><br><em>If this section is selected: <strong>${CFG.endowment - fee - 80} points</strong> (105 \u{2212} ${fee} fee \u{2212} 80 loss = ${CFG.endowment - fee - 80} pts = $${((CFG.endowment - fee - 80) * RESEARCHER.pointValue).toFixed(2)}).</em>`;
+      <br><br><em>If this section is selected: <strong>${CFG.endowment - fee - 80} points</strong> (${CFG.endowment} \u{2212} ${fee} fee \u{2212} 80 loss = ${CFG.endowment - fee - 80} pts = $${((CFG.endowment - fee - 80) * RESEARCHER.pointValue).toFixed(2)}).</em>`;
     boxCls = 'ib-amber';
   } else {
     headline = '\u{26A0}\u{FE0F} A loss.';
     body = `You trigger the recovery option, getting back 60 points. You lose only 40 instead of 100.
-      <br><br><em>If this section is selected: <strong>${CFG.endowment - fee - 40} points</strong> (105 \u{2212} ${fee} fee \u{2212} 40 loss = ${CFG.endowment - fee - 40} pts = $${((CFG.endowment - fee - 40) * RESEARCHER.pointValue).toFixed(2)}).</em>`;
+      <br><br><em>If this section is selected: <strong>${CFG.endowment - fee - 40} points</strong> (${CFG.endowment} \u{2212} ${fee} fee \u{2212} 40 loss = ${CFG.endowment - fee - 40} pts = $${((CFG.endowment - fee - 40) * RESEARCHER.pointValue).toFixed(2)}).</em>`;
     boxCls = 'ib-amber';
   }
 
