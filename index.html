@@ -262,21 +262,22 @@ const RESEARCHER = {
 // ===============================================================
 
 const CFG = {
-  studyName:    'Reassurance-Seeking Experiment \u{2014} Study 4',
+  studyName:    'Reassurance-Seeking Experiment \u{2014} Study 5',
   endowment:    105,   // total points given to participant
   coins:        100,   // points at stake on each section's bonus
-  // Study 4 loss-probability levels (5% \u{2026} 50%): a wider range than Study 3, spanning
-  // the low-risk regime (where reassurance-seeking is predicted) up to an even coin-flip.
-  probabilities: [0.05, 0.10, 0.20, 0.30, 0.50, 0.70],
-  practiceProb:  0.40,   // practice-round loss chance (distinct from real levels; doesn't count)
+  // Study 5 loss-probability levels: pushed to the EXTREMES (2% \u{2026} 90%) so the
+  // "almost-certainly-good-news" and "almost-certainly-bad-news" tails \u{2014} where
+  // reassurance (approach) and avoidance are strongest \u{2014} are both present.
+  probabilities: [0.02, 0.10, 0.30, 0.60, 0.90],
+  practiceProb:  0.50,   // practice-round loss chance (distinct from real levels; doesn't count)
   conditions: {
     none: {
       label:      'No Instrumentality',
       cls:        'cond-none',
       recoverable: 0,
-      ifBadNews:  'this result is <strong>final</strong> \u{2014} opening it now <strong>cannot change it</strong>. You just find out now instead of in a week.',
-      nowDesc:    'Find out today. You can\'t change the result \u{2014} but you end the not-knowing now: <strong>relief</strong> if it\'s good news, or knowing the loss and sitting with it.',
-      waitDesc:   'Leave it sealed \u{2014} find out in <strong>1 week</strong>. You carry the <strong>uncertainty</strong> until then.',
+      ifBadNews:  'this result is <strong>final</strong> \u{2014} opening it now <strong>cannot change it</strong>. Opening is the <strong>only way you will ever see</strong> this result; if you leave it sealed, it <strong>stays sealed</strong> and you never find out.',
+      nowDesc:    'Find out now. You can\'t change the result \u{2014} but you end the not-knowing: <strong>relief</strong> if it\'s good news, or knowing the loss and sitting with it.',
+      waitDesc:   'Leave it sealed \u{2014} you <strong>never find out</strong> this result. The not-knowing stays with you; the result is <strong>never revealed</strong>.',
       debrief:    'In your condition, opening early had <strong>no practical value</strong> \u{2014} the result was final and could not be changed. Our theory predicts reassurance-seeking should dominate: people open <em>more when a good outcome is likely</em> (low chance of a loss, to feel reassured) and <em>less when a loss is likely</em> (to avoid the bad news).'
     },
     low: {
@@ -284,8 +285,8 @@ const CFG = {
       cls:        'cond-low',
       recoverable: 20,
       ifBadNews:  'you can trigger a small <strong>recovery option</strong> \u{2014} getting back about <strong>20 of 100 points</strong> (you lose 80 instead of 100). It\'s only available if you open the result now.',
-      nowDesc:    'Find out today. If it\'s a loss, a small recovery option gets back ~20 points; if it\'s good, relief (and you keep your points, minus the open fee).',
-      waitDesc:   'Wait a week to find out \u{2014} but too late for the recovery option, and you carry the uncertainty until then. A loss then costs the full 100 points.',
+      nowDesc:    'Find out now. If it\'s a loss, a small recovery option gets back ~20 points; if it\'s good, relief (and you keep your points, minus the open fee).',
+      waitDesc:   'Seal it \u{2014} you <strong>never find out</strong> this result, and the recovery option is <strong>gone</strong>. A loss then costs the full 100 points.',
       debrief:    'In your condition, opening early had <strong>limited practical value</strong> (a small recovery). Our theory predicts reassurance-seeking still adds to information-seeking, especially when a good outcome is likely.'
     },
     high: {
@@ -293,8 +294,8 @@ const CFG = {
       cls:        'cond-high',
       recoverable: 60,
       ifBadNews:  'you can trigger a full <strong>recovery option</strong> \u{2014} getting back about <strong>60 of 100 points</strong> (you lose only 40 instead of 100). It\'s only available if you open the result now.',
-      nowDesc:    'Find out today. If it\'s a loss, a full recovery option gets back ~60 points; if it\'s good, relief (and you keep your points, minus the open fee).',
-      waitDesc:   'Wait a week to find out \u{2014} but too late for the recovery option, and you carry the uncertainty until then. A loss then costs the full 100 points.',
+      nowDesc:    'Find out now. If it\'s a loss, a full recovery option gets back ~60 points; if it\'s good, relief (and you keep your points, minus the open fee).',
+      waitDesc:   'Seal it \u{2014} you <strong>never find out</strong> this result, and the recovery option is <strong>gone</strong>. A loss then costs the full 100 points.',
       debrief:    'In your condition, opening early had <strong>high practical value</strong> (a large recovery on a loss). Our theory predicts practical value increases information-seeking, especially when a loss is more likely.'
     }
   }
@@ -364,6 +365,8 @@ const S = {
   roundLoss: null,     // whether this round is a loss (outcome spin \u{2264} T)
   decideStart: null,   // timestamp when the pay/wait choice becomes available
   roundDistress: null, // per-trial: "how much does not knowing bother you right now?" (1-7)
+  roundAnticBad: null, // per-trial anticipated affect: how bad a loss would feel (1-7)
+  roundAnticGood: null,// per-trial anticipated affect: how good good-news would feel (1-7)
   perceivedScore: null // participant's expectation: how many of the rounds they think are good
 };
 
@@ -382,6 +385,7 @@ function riskWord(p) { return p<=.15?'Very Low Risk':p<=.35?'Low Risk':p<=.65?'M
 function cond()      { return CFG.conditions[S.condition]; }
 // Current round's loss probability \u{2014} practice uses a fixed level, real rounds use the shuffled order.
 function roundProb() { return S.isPractice ? CFG.practiceProb : S.trialOrder[S.currentTrial]; }
+function sealedCount() { return S.responses.filter(r => !r.seek_now).length; } // waited (still-sealed) results so far
 
 function render() {
   if (S.countdownInterval) { clearInterval(S.countdownInterval); S.countdownInterval=null; }
@@ -460,7 +464,7 @@ function renderWelcome() {
   <p style="font-size:17px;color:#374151;margin-bottom:28px;">A study on how people decide whether to look at a personal result they're uncertain about.</p>
 
   <div class="infobox ib-blue">
-    <strong>What you'll do:</strong> You'll take part in a study with <strong>${S.trialOrder.length} independent rounds</strong>. In each round you have a <strong>100-point endowment</strong> that you might lose, and each round shows you the <strong>true probability</strong> that you'll lose it. In each round, you decide whether to <em>open the result now</em> (small ${RESEARCHER.scoutFee}-point fee) or <em>wait and find out in 1 week</em>. After all ${S.trialOrder.length} rounds, you'll answer a few questions about how you felt.
+    <strong>What you'll do:</strong> You'll take part in a study with <strong>${S.trialOrder.length} independent rounds</strong>. In each round you have a <strong>100-point endowment</strong> that you might lose, and each round shows you the <strong>true probability</strong> that you'll lose it. In each round, you decide whether to <em>open the result now</em> (small ${RESEARCHER.scoutFee}-point fee) or <em>leave it sealed and never find out</em>. After all ${S.trialOrder.length} rounds, you'll answer a few questions about how you felt.
   </div>
 
   <div class="infobox ib-green">
@@ -558,10 +562,11 @@ function submitDemographics() {
 // manipulated factor p \u{2208} {10,30,50,70,90}%). An outcome is then drawn by a genuine spin
 // (1\u{2013}100) and SEALED (run, not shown). Spin ABOVE the line = a loss. Honest, since
 // P(spin > T) = (100\u{2212}T)/100 = p exactly. The participant pays a fee to REVEAL the sealed
-// outcome now (information-seeking), or waits to find out in a week.
+// outcome now (information-seeking), or seals it and never finds out.
 function sealRound(){
   const p = roundProb();
-  S.roundDistress = null;                             // reset per-trial feeling item
+  S.roundDistress = null;                             // reset per-trial feeling items
+  S.roundAnticBad = null; S.roundAnticGood = null;    // reset anticipated-affect items
   S.roundRisk = Math.round(100 * p);                 // RISK wheel value = the loss % (1\u{2013}100), preset
   S.roundSpin = 1 + Math.floor(Math.random()*100);   // OUTCOME wheel value (1\u{2013}100), genuine spin
   S.roundLoss = S.roundSpin <= S.roundRisk;          // lose if the outcome lands at/below the risk number
@@ -576,7 +581,7 @@ function renderInsight() {   // brief intro + expectation self-report
     You'll play <strong>${total} rounds</strong>, each with <strong>100 points</strong> (real bonus) at stake. Every round has two wheels. <strong>Spin 1 (the risk wheel)</strong> lands on a number 1\u{2013}100 \u{2014} that number <em>is</em> your % chance of losing this round. <strong>Spin 2 (the outcome wheel)</strong> then lands on a number 1\u{2013}100: if it's <strong>at or below</strong> the risk number, you lose that round's 100. It's pure chance; there's no skill.
   </div>
   <div class="infobox ib-blue">
-    The outcome wheel is spun and its result is <strong>locked in</strong> each round \u{2014} decided but hidden. You then choose: <strong>pay a small fee to see it now</strong>, or <strong>wait</strong> and see it later.
+    The outcome wheel is spun and its result is <strong>locked in</strong> each round \u{2014} decided but hidden. You then choose: <strong>pay a small fee to see it now</strong>, or <strong>keep it sealed</strong> and never find out.
   </div>
   <div class="btn-row"><button class="btn btn-primary" onclick="submitInsight()">Continue \u{2192}</button></div>
 </div>`;
@@ -600,22 +605,22 @@ function renderInstructions() {
 
   <h3>Your Sealed Results</h3>
   <p>Your ${S.trialOrder.length} results have been <strong>randomly generated and sealed</strong> \u{2014} each decided purely by chance and locked to you. Across <strong>${S.trialOrder.length} sections</strong>, each result stays sealed until you choose to open it. Each section states the <strong>true probability</strong> that its sealed result is a <strong>loss</strong> (which would cost the section's points). You have no way of knowing any result until you open it.</p>
-  <p>For each of the ${S.trialOrder.length} sections, you'll face the same choice: <strong>open it now, or wait?</strong></p>
+  <p>For each of the ${S.trialOrder.length} sections, you'll face the same choice: <strong>open it now, or keep it sealed for good?</strong></p>
 
   <h3>Your Points</h3>
   <p>Each section carries <strong>105 points</strong> (each worth <strong>$${RESEARCHER.pointValue.toFixed(2)}</strong> \u{2014} maximum earnings $${(CFG.endowment * RESEARCHER.pointValue).toFixed(2)}).</p>
   <div class="infobox ib-blue">
     <strong>\u{1F50E} Open the result now</strong> \u{2014} costs <strong>${RESEARCHER.scoutFee} points</strong>. You see this section's sealed result <strong>right away</strong>.<br><br>
-    <strong>\u{23F3} Wait</strong> \u{2014} free. You'll learn this section's result in <strong>1 week</strong>. If you wait, you <strong>keep the ${RESEARCHER.scoutFee}-point fee</strong>.
+    <strong>\u{1F512} Leave it sealed</strong> \u{2014} free. This section's result is <strong>never revealed \u{2014} you never find out</strong>. If you seal it, you <strong>keep the ${RESEARCHER.scoutFee}-point fee</strong>.
   </div>
   <div class="infobox ib-purple">
-    Opening doesn't change the result \u{2014} only <strong>when you find out</strong>. Opening ends the not-knowing today (<strong>relief</strong> when it's good news, or knowing the loss and <strong>carrying it</strong>); waiting leaves it <strong>unresolved</strong> for a week.
+    Opening doesn't change the result \u{2014} only <strong>whether you ever find out</strong>. Opening ends the not-knowing (<strong>relief</strong> when it's good news, or knowing the loss and <strong>carrying it</strong>); sealing leaves it <strong>unresolved for good</strong> \u{2014} you never learn it.
   </div>
 
   <h3>If the Result Is a Loss</h3>
   <div class="infobox ${boxCls}">
     <strong>If you opened it:</strong> ${cd.ifBadNews}<br><br>
-    <strong>If you waited:</strong> ${isNone ? 'The outcome is the same either way \u{2014} but you sit with not knowing until the results are released.' : 'It\'s too late for the recovery option. A loss then costs the full 100 points.'}
+    <strong>If you sealed it:</strong> ${isNone ? 'The outcome is the same either way \u{2014} but you <strong>never find out</strong> what it was.' : 'It\'s too late for the recovery option, and you <strong>never find out</strong> the result. A loss then costs the full 100 points.'}
   </div>
 
   <div class="infobox ib-gray">
@@ -664,7 +669,7 @@ function renderComprehension() {
     <label class="radio-option" id="q2-b"><input type="radio" name="q2" value="b" onchange="S.compAnswers.q2='b'">
       <span>You pay a small fee (${RESEARCHER.scoutFee} points) and see this result right away.</span></label>
     <label class="radio-option" id="q2-c"><input type="radio" name="q2" value="c" onchange="S.compAnswers.q2='c'">
-      <span>You pay the ${RESEARCHER.scoutFee}-point fee, then wait a week to see it.</span></label>
+      <span>You pay the ${RESEARCHER.scoutFee}-point fee, but still never find out the result.</span></label>
   </div>
 
   <div id="comp-error" class="error-msg hidden">Please answer both questions.</div>
@@ -798,14 +803,20 @@ function renderLockSpin(){
       </div>
       <div style="text-align:center;font-size:13px;"><strong>If it's a loss:</strong> ${cd.ifBadNews}</div>
     </div>
-    <div class="infobox ib-purple" style="text-align:left;">Nothing you choose changes the result \u{2014} only <strong>when you find out</strong>. Sitting behind that lock is a result that is <strong>${100-S.roundRisk}% likely to be good news</strong>. <strong>Open now</strong> and you feel it today: the <strong>relief</strong> of good news, or the weight of a loss you'll <strong>carry for the week</strong>. <strong>Wait</strong> and you hold the <strong>not-knowing</strong> for a whole week before it's resolved.</div>
 
     <div class="likert-group" style="margin:14px 0 4px;">
-      <div class="likert-q" style="text-align:center;">Right now, how much does <strong>not knowing this result</strong> bother you?</div>
-      <div class="likert-scale" id="distress-scale">${[1,2,3,4,5,6,7].map(x=>`<input type="radio" name="distress" id="distress_${x}" value="${x}" onchange="S.roundDistress=${x};document.getElementById('distress-err').classList.add('hidden')"><label for="distress_${x}">${x}</label>`).join('')}</div>
-      <div class="likert-ends"><span>Not at all</span><span>A great deal</span></div>
+      <div class="likert-q" style="text-align:center;">If you opened this and it were a <strong>loss</strong> (${isNone ? "you <strong>can't change it</strong>" : `you could <strong>recover about ${cd.recoverable} points</strong>`}), how <strong>bad</strong> would you feel?</div>
+      <div class="likert-scale">${[1,2,3,4,5,6,7].map(x=>`<input type="radio" name="antic_bad" id="anticbad_${x}" value="${x}" onchange="S.roundAnticBad=${x};document.getElementById('anticbad-err').classList.add('hidden')"><label for="anticbad_${x}">${x}</label>`).join('')}</div>
+      <div class="likert-ends"><span>Not bad at all</span><span>Very bad</span></div>
     </div>
-    <div id="distress-err" class="error-msg hidden" style="text-align:center;">Please answer the question above first.</div>
+    <div id="anticbad-err" class="error-msg hidden" style="text-align:center;">Please answer the question above first.</div>
+
+    <div class="likert-group" style="margin:14px 0 4px;">
+      <div class="likert-q" style="text-align:center;">If you opened this and it were <strong>good news</strong> (you <strong>keep the 100 points</strong>), how <strong>good</strong> would you feel?</div>
+      <div class="likert-scale">${[1,2,3,4,5,6,7].map(x=>`<input type="radio" name="antic_good" id="anticgood_${x}" value="${x}" onchange="S.roundAnticGood=${x};document.getElementById('anticgood-err').classList.add('hidden')"><label for="anticgood_${x}">${x}</label>`).join('')}</div>
+      <div class="likert-ends"><span>Not good at all</span><span>Very good</span></div>
+    </div>
+    <div id="anticgood-err" class="error-msg hidden" style="text-align:center;">Please answer the question above first.</div>
 
     <h3 style="text-align:center;margin-top:10px;">Do you want to know the result?</h3>
     <button class="choice-btn" onclick="decide('now')">
@@ -814,7 +825,7 @@ function renderLockSpin(){
       <span class="c-cost">\u{1F4B0} ${RESEARCHER.scoutFee} pt fee</span>
     </button>
     <button class="choice-btn" onclick="decide('wait')">
-      <div class="c-title">\u{23F3} No \u{2014} see it later, for free</div>
+      <div class="c-title">\u{1F512} No \u{2014} keep it sealed, never find out</div>
       <div class="c-desc">${cd.waitDesc} You keep the ${RESEARCHER.scoutFee}-point fee.</div>
     </button>
   </div>
@@ -833,9 +844,10 @@ function spinLockWheel(){
 }
 // Merged decision (shown right under the locked wheel): know now vs see later.
 function decide(choice){
-  // Require the per-trial feeling item before a real choice (not in practice).
-  if (!S.isPractice && S.roundDistress == null) {
-    const e=document.getElementById('distress-err'); if(e) e.classList.remove('hidden'); return;
+  // Require the per-trial feeling items before a real choice (not in practice).
+  if (!S.isPractice) {
+    if (S.roundAnticBad == null)  { const e=document.getElementById('anticbad-err');  if(e) e.classList.remove('hidden'); return; }
+    if (S.roundAnticGood == null) { const e=document.getElementById('anticgood-err'); if(e) e.classList.remove('hidden'); return; }
   }
   S.currentChoice = choice;
   // Practice round: don't record data; route back into the real trials.
@@ -844,7 +856,7 @@ function decide(choice){
       trial: S.currentTrial+1, probability: S.trialOrder[S.currentTrial], seek_now: choice==='now'?1:0,
       rt_decision_ms: Date.now() - (S.decideStart || Date.now()), rt_wait_ms: 0,
       outcome: S.roundLoss ? 'mishap' : 'none', risk: S.roundRisk, spin: S.roundSpin,
-      distress: S.roundDistress,
+      distress: S.roundDistress, antic_bad: S.roundAnticBad, antic_good: S.roundAnticGood,
       reassurance:null, fear:null, action:null
     });
   }
@@ -873,7 +885,7 @@ function renderResult() {
     boxCls = 'ib-green';
   } else if (S.condition === 'none') {
     headline = '\u{26A0}\u{FE0F} A loss.';
-    body = `The result is final \u{2014} you couldn't change it, but you now know instead of waiting a week. You lose the 100-point stake.
+    body = `The result is final \u{2014} you couldn't change it, but you now know instead of never finding out. You lose the 100-point stake.
       <br><br><em>If this section is selected: <strong>0 points</strong> (you lose the 100-pt stake; open fee already spent = 0 pts = $0.00).</em>`;
     boxCls = 'ib-red';
   } else if (S.condition === 'low') {
@@ -943,7 +955,7 @@ function renderLikertEnd() {
   const sorted = [...S.responses].sort((a,b) => a.probability - b.probability);
   const choiceSummary = sorted.map(r =>
     `<span style="display:inline-flex;align-items:center;gap:5px;margin:3px 4px;font-size:13px;background:${r.seek_now?'#eff6ff':'#f9fafb'};border:1px solid ${r.seek_now?'#bfdbfe':'#e5e7eb'};border-radius:99px;padding:3px 11px;font-weight:600;color:${r.seek_now?'#1d4ed8':'#6b7280'};">
-      ${pct(r.probability)}: ${r.seek_now?'\u{1F50E} Opened':'\u{23F3} Waited'}
+      ${pct(r.probability)}: ${r.seek_now?'\u{1F50E} Opened':'\u{1F512} Sealed'}
     </span>`
   ).join('');
 
@@ -1097,6 +1109,9 @@ function submitLikertEnd() {
   const pf = document.getElementById('comments');
   if (pf) S.survey.comments = pf.value.trim();
 
+  // Study 5: sealed results stay sealed -- there is no end-of-study reveal.
+  // Not-seeking means the participant genuinely never learns the outcome,
+  // which is what gives the reassurance / avoidance motive its pull.
   go('end');
 }
 
@@ -1240,7 +1255,7 @@ function dlCSV() {
   const cols = [
     'pid','cloudresearch_id','participant_id','assignment_id','project_id','participant_name','participant_email',
     'platform','condition','condition_label','condition_source',
-    'trial','probability','seek_now','outcome','risk_number','outcome_spin','distress',
+    'trial','probability','seek_now','outcome','risk_number','outcome_spin','distress','antic_bad','antic_good',
     'rt_decision_ms','rt_wait_ms',
     'comp_errors','scout_fee',
     'survey_reassurance','survey_fear_avoidance','survey_instrumental','survey_curiosity','survey_pattern','survey_motive_lowrisk','survey_open',
@@ -1253,7 +1268,7 @@ function dlCSV() {
   const rows = S.responses.map(r => [
     S.pid, S.crID||'', S.crID||'', S.assignmentID||'', S.projectID||'', S.participantName, S.participantEmail,
     S.platform, S.condition, cond().label, S.conditionSource,
-    r.trial, r.probability.toFixed(2), r.seek_now, r.outcome??'', r.risk??'', r.spin??'', r.distress??'',
+    r.trial, r.probability.toFixed(2), r.seek_now, r.outcome??'', r.risk??'', r.spin??'', r.distress??'', r.antic_bad??'', r.antic_good??'',
     r.rt_decision_ms, r.rt_wait_ms??0,
     S.compErrors, RESEARCHER.scoutFee,
     S.survey.reassurance??'', S.survey.fear_avoidance??'', S.survey.instrumental??'', S.survey.curiosity??'',
