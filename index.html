@@ -224,14 +224,11 @@ const RESEARCHER = {
     appId:             "1:762220390900:web:890065a172a6a24dd5f1a1"
   },
 
-  // CloudResearch Connect completion code shown on the final screen.
-  // Per CloudResearch: display the CODE (participants return to Connect and enter it),
-  // do NOT auto-redirect via a completion link \u{2014} a redirect prevents Connect from
-  // recognizing who completed the survey.
-  cloudResearchCompletionCode: 'B7EA184BF6',  // \u{26A0}\u{FE0F} pilot/Study-3 code -- REPLACE with Study 4's own CloudResearch Connect completion code before launch
-
-  // Redirect URL is intentionally left blank (do not auto-redirect to Connect).
-  cloudResearchCompletionURL: '',
+  // Prolific completion code shown on the final screen. Participants either click the
+  // completion link or paste this code back into Prolific to submit and be paid.
+  prolificCompletionCode: 'CQVP0MB9',
+  // Prolific completion URL (built from the code). Shown as a button on the final screen.
+  prolificCompletionURL: 'https://app.prolific.com/submissions/complete?cc=CQVP0MB9',
 
   // Wait time (seconds) when participant chooses "Contact now."
   // Set to 0 for researcher testing (skips countdown, still reveals result).
@@ -241,7 +238,7 @@ const RESEARCHER = {
   // "why pay for pointless info" calculation does not dominate the emotional
   // (reassurance/avoidance) motive -- the pilot's No-Instrumentality free-text
   // showed the 5-pt fee was the main reason people never opened. Tunable.
-  scoutFee: 2,
+  scoutFee: 1,
 
   // Payment details (shown to participants in instructions).
   pointValue:       0.25,   // $ per point
@@ -421,15 +418,23 @@ function init() {
   if (c==='none'||c==='low'||c==='high') { S.condition=c; S.conditionSource='url'; }
   else { S.condition=Math.random()<.5?'none':'high'; S.conditionSource='random'; }
 
-  // CloudResearch Connect identifiers passed from Qualtrics via the redirect URL, e.g.
-  // ?condition=none&participantId=...&assignmentId=...&projectId=...
+  // Prolific identifiers passed on the study URL, e.g.
+  // ?condition=none&PROLIFIC_PID=...&STUDY_ID=...&SESSION_ID=...
+  const prolificPID = p.get('PROLIFIC_PID') || p.get('prolific_pid') || p.get('prolificPid');
+  // Legacy CloudResearch identifiers (kept so older links still work).
   const crID = p.get('participantId') || p.get('participant_id')
             || p.get('CLOUDRESEARCH_PID') || p.get('cloudresearch_pid')
             || p.get('cr_id');
   const assignmentID = p.get('assignmentId') || p.get('assignment_id') || '';
   const projectID    = p.get('projectId')    || p.get('project_id')    || '';
   const mturkWorker = p.get('workerId') || p.get('worker_id');
-  if (crID) {
+  if (prolificPID) {
+    S.crID         = prolificPID;
+    S.studyID      = p.get('STUDY_ID')   || p.get('study_id')   || '';
+    S.sessionID    = p.get('SESSION_ID') || p.get('session_id') || '';
+    S.platform     = 'prolific';
+    S.participantID = prolificPID;
+  } else if (crID) {
     S.crID         = crID;
     S.assignmentID = assignmentID;
     S.projectID    = projectID;
@@ -481,7 +486,7 @@ function renderWelcome() {
   <div style="display:grid;gap:8px;font-size:13.5px;background:#f9fafb;padding:16px;border-radius:12px;border:1px solid #e5e7eb;">
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Participant ID</span> <strong>${S.pid}</strong></div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Platform</span> <strong>${S.platform}</strong></div>
-    <div><span style="color:#9ca3af;width:140px;display:inline-block;">Connect ID</span> <strong>${S.crID || '\u{26A0}\u{FE0F} not passed'}</strong></div>
+    <div><span style="color:#9ca3af;width:140px;display:inline-block;">Prolific/Connect ID</span> <strong>${S.crID || '\u{26A0}\u{FE0F} not passed'}</strong></div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">assignmentId</span> <strong>${S.assignmentID || '\u{2014} (optional)'}</strong></div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">projectId</span> <strong>${S.projectID || '\u{2014} (optional)'}</strong></div>
     <div><span style="color:#9ca3af;width:140px;display:inline-block;">Condition</span> <span class="cond-badge ${cd.cls}">${cd.label}</span></div>
@@ -499,6 +504,7 @@ function renderWelcome() {
 //  SCREEN: DEMOGRAPHICS
 // ===============================================================
 function renderDemographics() {
+  const isProlific = S.platform === 'prolific';
   const isCloudResearch = S.platform === 'cloudresearch';
   const isMTurk    = S.platform === 'mturk';
 
@@ -507,7 +513,14 @@ function renderDemographics() {
   <span class="step-pill">Your Information</span>
   <h2>Participant Details</h2>
 
-  ${isCloudResearch ? `
+  ${isProlific ? `
+    <div class="infobox ib-green">
+      \u{2705} <strong>Prolific detected.</strong> Your Prolific ID has been recorded automatically. No further action needed on this screen.
+    </div>
+    <div class="form-group">
+      <label class="form-label">Prolific ID</label>
+      <input class="form-input" readonly value="${S.crID}">
+    </div>` : isCloudResearch ? `
     <div class="infobox ib-green">
       \u{2705} <strong>Connect detected.</strong> Your Connect ID has been recorded automatically. No further action needed on this screen.
     </div>
@@ -522,12 +535,12 @@ function renderDemographics() {
       <label class="form-label">MTurk Worker ID</label>
       <input class="form-input" readonly value="${S.participantID}">
     </div>` : `
-    <p>Please enter your Connect ID below.</p>
+    <p>Please enter your Prolific ID below.</p>
     <div class="form-group">
-      <label class="form-label">Connect ID <span style="color:#ef4444">*</span></label>
+      <label class="form-label">Prolific ID <span style="color:#ef4444">*</span></label>
       <input class="form-input" id="f-pid" placeholder="e.g. 5e3f2a1b4c9d8e7f6a5b4c3d"
         value="${S.participantID}" oninput="S.participantID=this.value">
-      <div class="form-hint">You can find your Connect ID in your CloudResearch Connect account.</div>
+      <div class="form-hint">You can find your Prolific ID in your Prolific account.</div>
     </div>
     </div>`}
 
@@ -541,9 +554,10 @@ function renderDemographics() {
 }
 
 function submitDemographics() {
+  const isProlific = S.platform === 'prolific';
   const isCloudResearch = S.platform === 'cloudresearch';
   const isMTurk    = S.platform === 'mturk';
-  if (!isCloudResearch && !isMTurk && !S.participantID.trim()) {
+  if (!isProlific && !isCloudResearch && !isMTurk && !S.participantID.trim()) {
     document.getElementById('demo-err').classList.remove('hidden');
     return;
   }
@@ -1131,13 +1145,14 @@ function renderEnd() {
   </div>
 
   <hr class="divider">
-  <h3>Your CloudResearch Completion Code</h3>
-  ${RESEARCHER.cloudResearchCompletionCode ? `
-  <p style="margin-bottom:16px;">Copy the code below, then return to CloudResearch Connect and enter it to submit the study and receive payment. <strong>Do not close this page until you have submitted the code.</strong></p>
+  <h3>Your Prolific Completion Code</h3>
+  ${RESEARCHER.prolificCompletionCode ? `
+  <p style="margin-bottom:16px;">Click the button to return to Prolific and submit the study, or copy the code below and paste it into Prolific. <strong>You must do this to receive payment \u{2014} do not close this page until you have submitted.</strong></p>
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
-    <div style="font-size:32px;font-weight:900;letter-spacing:5px;color:#2563eb;background:#eff6ff;border:2px solid #bfdbfe;padding:16px 32px;border-radius:12px;">${RESEARCHER.cloudResearchCompletionCode}</div>
-    <button class="btn btn-secondary" onclick="navigator.clipboard.writeText('${RESEARCHER.cloudResearchCompletionCode}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Code',1500)})">Copy Code</button>
-  </div>` : `<div class="infobox ib-amber">\u{26A0}\u{FE0F} No completion code has been set. Please contact the researcher.</div>`}
+    <div style="font-size:32px;font-weight:900;letter-spacing:5px;color:#2563eb;background:#eff6ff;border:2px solid #bfdbfe;padding:16px 32px;border-radius:12px;">${RESEARCHER.prolificCompletionCode}</div>
+    <button class="btn btn-secondary" onclick="navigator.clipboard.writeText('${RESEARCHER.prolificCompletionCode}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Code',1500)})">Copy Code</button>
+  </div>
+  ${RESEARCHER.prolificCompletionURL ? `<div style="margin-bottom:20px;"><a class="btn btn-primary" href="${RESEARCHER.prolificCompletionURL}">Submit on Prolific \u{2192}</a></div>` : ''}` : `<div class="infobox ib-amber">\u{26A0}\u{FE0F} No completion code has been set. Please contact the researcher.</div>`}
 
   <hr class="divider">
   <h3>About This Study</h3>
@@ -1218,8 +1233,9 @@ function buildPayload() {
     study:             CFG.studyName,
     timestamp:         new Date().toISOString(),
     pid:               S.pid,
-    cloudresearch_id:  S.crID || '',
-    participant_id:    S.crID || '',           // CloudResearch Connect participantId (lottery matching)
+    prolific_pid:      S.platform==='prolific' ? (S.crID || '') : '',   // Prolific participant id (payment matching)
+    cloudresearch_id:  S.platform==='cloudresearch' ? (S.crID || '') : '',
+    participant_id:    S.crID || '',           // primary platform id (lottery/payment matching)
     assignment_id:     S.assignmentID || '',   // CloudResearch Connect assignmentId
     project_id:        S.projectID || '',      // CloudResearch Connect projectId
     participant_name:  S.participantName,
@@ -1253,7 +1269,7 @@ function buildPayload() {
 // ===============================================================
 function dlCSV() {
   const cols = [
-    'pid','cloudresearch_id','participant_id','assignment_id','project_id','participant_name','participant_email',
+    'pid','prolific_pid','cloudresearch_id','participant_id','assignment_id','project_id','participant_name','participant_email',
     'platform','condition','condition_label','condition_source',
     'trial','probability','seek_now','outcome','risk_number','outcome_spin','distress','antic_bad','antic_good',
     'rt_decision_ms','rt_wait_ms',
@@ -1266,7 +1282,7 @@ function dlCSV() {
   const ts = new Date().toISOString();
   const iuT  = Object.keys(S.survey.iu).length  ? Object.values(S.survey.iu).reduce((s,v)=>s+v,0)  : '';
   const rows = S.responses.map(r => [
-    S.pid, S.crID||'', S.crID||'', S.assignmentID||'', S.projectID||'', S.participantName, S.participantEmail,
+    S.pid, S.platform==='prolific'?(S.crID||''):'', S.platform==='cloudresearch'?(S.crID||''):'', S.crID||'', S.assignmentID||'', S.projectID||'', S.participantName, S.participantEmail,
     S.platform, S.condition, cond().label, S.conditionSource,
     r.trial, r.probability.toFixed(2), r.seek_now, r.outcome??'', r.risk??'', r.spin??'', r.distress??'', r.antic_bad??'', r.antic_good??'',
     r.rt_decision_ms, r.rt_wait_ms??0,
